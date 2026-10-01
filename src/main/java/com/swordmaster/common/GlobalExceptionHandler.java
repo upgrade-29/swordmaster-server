@@ -16,12 +16,12 @@ import org.springframework.web.util.DisconnectedClientHelper;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    // 게임 로직 에러
-    @ExceptionHandler(GameException.class)
-    public ResponseEntity<ErrorResponse> handleGame(GameException e) {
-        log.warn("GameException: {}", e.getMessage());
+    // General 에러
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
+        log.warn("BusinessException: {}", e.getMessage());
 
-        return getError(HttpStatus.BAD_REQUEST, e.getMessage());
+        return getError(e.getStatus(), e.getMessage());
     }
 
     // Valid 검증 실패
@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(FieldError::getDefaultMessage)
-                .orElse("검증 실패");
+                .orElse("검증이 실패했습니다.");
 
         log.warn("MethodArgumentNotValidException: {}", message);
 
@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException e) {
         log.warn("HttpMessageNotReadableException: {}", e.getMessage());
 
-        return getError(HttpStatus.BAD_REQUEST, "JSON 형식 오류, 본문을 읽을 수 없음");
+        return getError(HttpStatus.BAD_REQUEST, "JSON 형식 오류, 본문을 읽을 수 없습니다.");
     }
 
     // 파라미터 타입 불일치
@@ -50,13 +50,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
         log.warn("MethodArgumentTypeMismatchException: {} = {}", e.getName(), e.getValue());
 
-        return getError(HttpStatus.BAD_REQUEST, "파라미터 타입 불일치");
+        return getError(HttpStatus.BAD_REQUEST, "파라미터 타입이 일치하지 않습니다.");
     }
 
     // 존재하지 않는 URL
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoResource() {
-        return getError(HttpStatus.NOT_FOUND, "요청을 찾을 수 없음");
+        return getError(HttpStatus.NOT_FOUND, "요청을 찾을 수 없습니다.");
     }
 
     // 예상치 못한 오류
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
 
         log.error("Exception: {} {}", request.getMethod(), request.getRequestURI(), e);
 
-        return getError(HttpStatus.INTERNAL_SERVER_ERROR, "예상치 못한 오류");
+        return getError(HttpStatus.INTERNAL_SERVER_ERROR, "예상치 못한 오류가 발생했습니다.");
     }
 
     private ResponseEntity<ErrorResponse> getError(HttpStatus status, String message) {
