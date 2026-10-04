@@ -1,4 +1,7 @@
-package com.swordmaster.equipment;
+package com.swordmaster.equipment.sword;
+
+import com.swordmaster.equipment.Equipment;
+import com.swordmaster.equipment.EquipmentType;
 
 public record Sword(
         int    level,               // PK
@@ -9,5 +12,7 @@ public record Sword(
         long   attackPower,
         double attackSpeed,
         long   maxHp
-) {
+) implements Equipment {
+    @Override
+    public EquipmentType type() { return EquipmentType.SWORD; }
 }

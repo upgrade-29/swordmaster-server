@@ -1,7 +1,9 @@
-package com.swordmaster.equipment;
+package com.swordmaster.equipment.artifact;
 
 import com.swordmaster.common.sheet.GoogleSheetClient;
 import com.swordmaster.common.sheet.SheetTable;
+import com.swordmaster.equipment.EquipmentRarity;
+import com.swordmaster.equipment.EquipmentStat;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.*;

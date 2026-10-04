@@ -1,4 +1,4 @@
-package com.swordmaster.equipment;
+package com.swordmaster.equipment.sword;
 
 import com.swordmaster.common.sheet.GoogleSheetClient;
 import com.swordmaster.common.sheet.SheetTable;
