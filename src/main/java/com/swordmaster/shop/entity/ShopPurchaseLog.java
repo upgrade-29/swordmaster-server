@@ -27,7 +27,7 @@ import java.util.List;
         @Index(name = "idx_shop_purchase_user",columnList = "user_id,created_at")
 }
 )
-public class ShopPurchaseLogs {
+public class ShopPurchaseLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,9 +52,9 @@ public class ShopPurchaseLogs {
 
     @CreatedDate
     @Column(name = "created_at",nullable = false,columnDefinition = "DATETIME(6)",updatable = false)
-    private Instant createdAt;
+    private Instant createdAt;  //현재 시간 기준을 utc로 두는 Instant 사용중인데 강의 때처럼 LocalDataTime pc 시간 설정으로 둘지 상의 필요
 
-    public ShopPurchaseLogs(long userId, String productCode, CurrencyType priceType, long price, List<Reward> rewards) {
+    public ShopPurchaseLog(long userId, String productCode, CurrencyType priceType, long price, List<Reward> rewards) {
         this.userId = userId;
         this.productCode = productCode;
         this.priceType = priceType;
