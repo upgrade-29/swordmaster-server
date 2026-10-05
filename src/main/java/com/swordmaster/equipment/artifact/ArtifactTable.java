@@ -1,15 +1,17 @@
 package com.swordmaster.equipment.artifact;
 
-import com.swordmaster.common.sheet.GoogleSheetClient;
-import com.swordmaster.common.sheet.SheetTable;
+import com.swordmaster.common.table.GoogleSheetClient;
+import com.swordmaster.common.table.SheetTable;
 import com.swordmaster.equipment.EquipmentRarity;
 import com.swordmaster.equipment.EquipmentStat;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Component
 public class ArtifactTable extends SheetTable<Artifact> {
     // 복합 키 (stat + rarity)
     private record Key(EquipmentStat stat, EquipmentRarity rarity) {}

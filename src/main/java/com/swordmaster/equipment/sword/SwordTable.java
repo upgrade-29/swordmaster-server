@@ -1,7 +1,7 @@
 package com.swordmaster.equipment.sword;
 
-import com.swordmaster.common.sheet.GoogleSheetClient;
-import com.swordmaster.common.sheet.SheetTable;
+import com.swordmaster.common.table.GoogleSheetClient;
+import com.swordmaster.common.table.SheetTable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
