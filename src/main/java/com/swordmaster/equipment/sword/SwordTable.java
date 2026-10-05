@@ -76,6 +76,8 @@ public class SwordTable extends SheetTable<Sword> {
     @Override
     public List<Sword> getAll() { return byLevel; }
 
+    public Sword getFirst() { return byLevel.getFirst(); }
+
     public Optional<Sword> findByLevel(int level) {
         if (level < 0 || level >= byLevel.size()) return Optional.empty();
 
