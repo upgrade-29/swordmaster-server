@@ -16,7 +16,7 @@ public class ShopFacade {
     //개발 계획서에서 데드락 발생 시를 대비하여 facade 패턴을 사용하던 구간
 
     private static final int MAX_RETRY = 2; //최대 시행 횟수
-    private static final int MYSQL_DEADLOCK = 1213; //데드락 발생시 반환되는 int 값
+    private static final int MYSQL_DEADLOCK = 1213; //데드락 발생시 반환되는 에러코드
 
     private final ShopService shopService;
 

@@ -1,7 +1,8 @@
 package com.swordmaster.shop.entity;
 
 
-import com.swordmaster.shop.Reward;
+import com.swordmaster.shop.CurrencyType;
+import com.swordmaster.shop.dto.Reward;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -11,8 +12,11 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
+
+
+//상점에서의 구입 기록을 남기기 위한 테이블 엔티티
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -24,20 +28,20 @@ import java.util.List;
 }
 )
 public class ShopPurchaseLogs {
-    //상점에서의 구입 기록을 남기기 위한 테이블 엔티티
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
     @Column(name = "user_id" ,nullable = false)
-    private long userId;
+    private Long userId;
 
     @Column(name = "product_code",nullable = false ,length = 30)
-    private String product_code;
+    private String productCode;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "price_type",nullable = false,length = 10)
-    private String price_type;
+    private CurrencyType priceType;
 
     @Column(name = "price",nullable = false)
     private long price;
@@ -47,15 +51,14 @@ public class ShopPurchaseLogs {
     private List<Reward> rewards;
 
     @CreatedDate
-    @Column(name = "created_at",nullable = false)
-    private LocalDateTime createdAt;  //auditing 추가여부 확인
+    @Column(name = "created_at",nullable = false,columnDefinition = "DATETIME(6)",updatable = false)
+    private Instant createdAt;
 
-    public ShopPurchaseLogs(long id, long userId, String product_code, String price_type, long price, List<Reward> rewards, LocalDateTime created_at) {
-        this.id = id;
+    public ShopPurchaseLogs(long userId, String productCode, CurrencyType priceType, long price, List<Reward> rewards) {
         this.userId = userId;
-        this.product_code = product_code;
-        this.price_type = price_type;
+        this.productCode = productCode;
+        this.priceType = priceType;
         this.price = price;
-        this.rewards = rewards;
+        this.rewards = List.copyOf(rewards);
     }
 }
