@@ -83,10 +83,4 @@ public class SwordTable extends SheetTable<Sword> {
 
         return Optional.of(byLevel.get(level));
     }
-
-    public Optional<Sword> getNext(Sword current) {
-        return findByLevel(current.level() + 1);
-    }
-
-    public int maxLevel() { return byLevel.size() - 1; }
 }

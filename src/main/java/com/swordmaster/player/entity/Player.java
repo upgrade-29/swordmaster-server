@@ -26,4 +26,8 @@ public class Player {
         this.user       = user;
         this.swordLevel = swordLevel;
     }
+
+    public void changeSwordLevel(int swordLevel) {
+        this.swordLevel = swordLevel;
+    }
 }
