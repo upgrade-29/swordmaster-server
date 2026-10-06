@@ -40,14 +40,4 @@ public class UserController {
     ){
         return ResponseEntity.ok(userService.getMe(userId));
     }
-
-    //TODO 나중에 연결 종료 시 게임 데이터를 저장해서 거기부터 다시하기를 원하는 경우 구현
-    @GetMapping("/api/game-data")
-    public ResponseEntity<UserResponse> getGameData(
-            @AuthenticationPrincipal Long userId
-    ){
-        return ResponseEntity.ok(null
-                //userService.getGameData(userId)
-        );
-    }
 }
