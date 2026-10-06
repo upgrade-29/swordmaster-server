@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -34,15 +35,15 @@ public class User {
     @Column(nullable = false)//왜 다이아는 int인가?
     private int diamond = 0;
 
-    private LocalDateTime lastLoginAt;
+    private Instant lastLoginAt;
 
     @UpdateTimestamp
     @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant  updatedAt;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant  createdAt;
 
     public User(String email, String password, String nickname) {
         this.email = email;
@@ -51,6 +52,6 @@ public class User {
     }
 
     public void updateLastLoginAt() {
-        this.lastLoginAt = LocalDateTime.now();
+        this.lastLoginAt = Instant.now();
     }
 }
