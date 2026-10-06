@@ -1,5 +1,6 @@
 package com.swordmaster.user.service;
 
+import com.swordmaster.common.BusinessException;
 import com.swordmaster.jwt.JwtProvider;
 import com.swordmaster.sword.entity.Sword;
 import com.swordmaster.sword.repository.SwordRepository;
@@ -49,10 +50,10 @@ public class UserService {
     @Transactional
     public LoginResponse login(@Valid LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResponseStatusException(
+                .orElseThrow(() -> new BusinessException(
                         HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."));
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new ResponseStatusException(
+            throw new BusinessException(
                     HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
         String token = jwtProvider.createToken(user.getId());
@@ -64,11 +65,11 @@ public class UserService {
     public UserResponse getMe(Long userId) {
         User user = userRepository.findById(userId).
                 orElseThrow( ()->
-                        new IllegalArgumentException("getMe 오류 : 사용자 없음")
+                        new BusinessException("getMe 오류 : 사용자 없음")
                 );
         Sword sword = swordRepository.findById(userId).
                 orElseThrow( ()->
-                        new IllegalArgumentException("getMe 오류 : sword 없음")
+                        new BusinessException("getMe 오류 : sword 없음")
                 );
 
         return new UserResponse(
