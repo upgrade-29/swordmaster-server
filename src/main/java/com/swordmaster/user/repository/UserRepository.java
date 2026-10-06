@@ -1,6 +1,6 @@
 package com.swordmaster.user.repository;
 
-import com.example.springtest.user.entity.User;
+import com.swordmaster.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
