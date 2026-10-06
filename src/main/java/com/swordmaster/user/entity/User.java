@@ -8,7 +8,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -28,12 +27,6 @@ public class User {
 
     @Column(nullable = false, length = 10)
     private String nickname;
-
-    @Column(nullable = false)
-    private Long gold = 0L; //생각해보니 기본 자금은 필요함
-
-    @Column(nullable = false)//왜 다이아는 int인가?
-    private int diamond = 0;
 
     private Instant lastLoginAt;
 
