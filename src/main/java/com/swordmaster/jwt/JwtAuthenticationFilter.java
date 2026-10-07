@@ -1,5 +1,7 @@
 package com.swordmaster.jwt;
 
+import com.swordmaster.user.entity.User;
+import com.swordmaster.user.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -19,6 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtProvider jwtProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -39,12 +43,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId =
                         jwtProvider.getUserId(token);
 
+                User user = userRepository.findById(userId).orElse(null);
+
+                if (user == null || user.getRole() == null) {
+                    SecurityContextHolder.clearContext();
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+
+                SimpleGrantedAuthority authority =
+                        new SimpleGrantedAuthority(
+                                "ROLE_" + user.getRole().name()
+                        );
+
                 //Authentication 생성
                 Authentication authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userId,
                                 null,
-                                List.of()
+                                List.of(authority)
                         );
 
                 // 현재 요청의 SecurityContext에 인증 정보 저장
