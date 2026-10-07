@@ -1,4 +1,4 @@
-package com.swordmaster.common.sheet;
+package com.swordmaster.common.table;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
