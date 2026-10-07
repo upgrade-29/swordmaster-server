@@ -39,9 +39,9 @@ public class CurrencyService {
     }
 
     // 조회 (전체)
-    public Map<CurrencyType, Long> getAll(Long userId) {
+    public Map<CurrencyType, Long> getAll(Player player) {
         Map<CurrencyType, Long> result     = new EnumMap<>(CurrencyType.class);
-        List<PlayerCurrency>    currencies = playerCurrencyRepository.findAllByPlayer_User_Id(userId);
+        List<PlayerCurrency>    currencies = playerCurrencyRepository.findAllByPlayer(player);
 
         for (PlayerCurrency currency : currencies)
             result.put(currency.getType(), currency.getAmount());
@@ -49,22 +49,22 @@ public class CurrencyService {
         return result;
     }
 
-    // 조회 (단일)
-    public long getAmount(Long userId, CurrencyType type) {
-        return find(userId, type).getAmount();
-    }
-
-    // 조회 (유효성 검사)
-    public boolean has(Long userId, CurrencyType type, long value) {
-        return find(userId, type).has(value);
-    }
+//    // 조회 (단일)
+//    public long getAmount(Player player, CurrencyType type) {
+//        return find(player, type).getAmount();
+//    }
+//
+//    // 조회 (유효성 검사)
+//    public boolean has(Player player, CurrencyType type, long value) {
+//        return find(player, type).has(value);
+//    }
 
     // 변경 (지급)
     @Transactional
-    public long grant(Long userId, CurrencyType type, long value, CurrencyReason reason) {
+    public long grant(Player player, CurrencyType type, long value, CurrencyReason reason) {
         checkPositive(value);   // 양수인지 확인
 
-        PlayerCurrency currency = find(userId, type);
+        PlayerCurrency currency = find(player, type);
 
         currency.add(value);
 
@@ -73,13 +73,12 @@ public class CurrencyService {
 
     // 변경 (차감)
     @Transactional
-    public long consume(Long userId, CurrencyType type, long value, CurrencyReason reason) {
+    public long consume(Player player, CurrencyType type, long value, CurrencyReason reason) {
         checkPositive(value);   // 양수인지 확인
 
-        PlayerCurrency currency = find(userId, type);
+        PlayerCurrency currency = find(player, type);
 
-        if (!currency.has(value))
-            throw new BusinessException(type + "이(가) 부족합니다.");
+        if (!currency.has(value)) throw new BusinessException(type + "이(가) 부족합니다.");
 
         currency.subtract(value);
 
@@ -88,11 +87,11 @@ public class CurrencyService {
 
     // 변경 (관리자)
     @Transactional
-    public long adjust(Long userId, CurrencyType type, long targetAmount, String memo) {
+    public long adjust(Player player, CurrencyType type, long targetAmount, String memo) {
         if (targetAmount < 0)               throw new BusinessException("조정할 값이 음수입니다.");
         if (memo == null || memo.isBlank()) throw new BusinessException("메모를 입력해주세요.");
 
-        PlayerCurrency currency = find(userId, type);
+        PlayerCurrency currency = find(player, type);
         long           delta    = targetAmount - currency.getAmount();
 
         if      (delta == 0) return currency.getAmount();    // 변동 없이 종료
@@ -103,8 +102,8 @@ public class CurrencyService {
     }
 
     // 공통 (조회)
-    private PlayerCurrency find(Long userId, CurrencyType type) {
-        return playerCurrencyRepository.findByPlayer_User_IdAndType(userId, type)
+    private PlayerCurrency find(Player player, CurrencyType type) {
+        return playerCurrencyRepository.findByPlayerAndType(player, type)
                 .orElseThrow(() -> new BusinessException(
                         HttpStatus.INTERNAL_SERVER_ERROR, type + "의 재화 정보가 없습니다."
                 ));
