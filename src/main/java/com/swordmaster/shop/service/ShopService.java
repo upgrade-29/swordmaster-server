@@ -1,6 +1,7 @@
 package com.swordmaster.shop.service;
 
 import com.swordmaster.common.BusinessException;
+import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
@@ -59,11 +60,11 @@ public class ShopService {
             throw new BusinessException(HttpStatus.CONFLICT,"NOT_ENOUGH_"+priceType.name());
 
         //유저의 재화에서 가격만큼 차감을 시도.
-        currencyService.consume(userId, priceType,product.price());
+        currencyService.consume(userId, priceType,product.price(), CurrencyReason.PURCHASE);
 
         //재화가 차감되었다면 유저에게 보상을 지급.
         for(Reward reward : rewards){
-            rewardService.reward(userId,reward);
+            rewardService.reward(userId,reward,CurrencyReason.PURCHASE);
         }
 
         //차감 및 보상 완료 후의 재화를 재화 응답 dto 에 담음
