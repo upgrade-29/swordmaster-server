@@ -1,11 +1,12 @@
 package com.swordmaster.shop;
 
-import com.swordmaster.gamedata.shop.ShopProduct;
+
 import com.swordmaster.shop.dto.Currencies;
 import com.swordmaster.shop.dto.Reward;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
 import com.swordmaster.shop.entity.ShopPurchaseLog;
 import com.swordmaster.shop.repository.ShopPurchaseLogRepository;
+import com.swordmaster.shop.table.ShopProduct;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

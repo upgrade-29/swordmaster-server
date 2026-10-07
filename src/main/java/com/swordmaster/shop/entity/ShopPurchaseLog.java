@@ -1,10 +1,10 @@
 package com.swordmaster.shop.entity;
 
 
-import com.swordmaster.gamedata.shop.ShopProduct;
 import com.swordmaster.shop.CurrencyType;
 import com.swordmaster.shop.dto.Reward;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
+import com.swordmaster.shop.table.ShopProduct;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
