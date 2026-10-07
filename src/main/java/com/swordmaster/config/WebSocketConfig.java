@@ -21,10 +21,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.setUserDestinationPrefix("/user"); // /user 로 시작하는 주소를 사용자용(개인) 전달 주소로 처리 후 브로커에게 전달
         registry.enableSimpleBroker("/topic", "/queue"); // /topic(공용), /queue(개인) 로 시작하는 주소를 브로커로 만들어서 구독을 하거나 문자를 보낼 수 있다.
         registry.setApplicationDestinationPrefixes("/app"); // /app 으로 시작하는 주소를 보내면 서버가 뒤를 처리 메서드로 연결한다. (해당 방식들은 전부 @MessageMapping 이라는 http가 아닌 방식을 사용한다. 무조건 ws를 통해서 app으로 호출되어야하는 것이다.)
-        registry.setUserDestinationPrefix("/user"); // /user 로 시작하는 주소를 사용자용(개인) 전달 주소로 처리
-    }
+}
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) { //대부분 인바운드(클라->서버)라고 배웠다

@@ -20,7 +20,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter {//admin의 인증을 만들어주는 기능
     private final JwtProvider jwtProvider;
     private final UserRepository userRepository;
 
@@ -53,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SimpleGrantedAuthority authority =
                         new SimpleGrantedAuthority(
-                                "ROLE_" + user.getRole().name()
+                                "ROLE_" + user.getRole().name()//admin의 인증을 부여함, 이후 filter를 통해서 spring이 자체적으로 인증을 해준다.
                         );
 
                 //Authentication 생성
