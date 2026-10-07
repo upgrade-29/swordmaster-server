@@ -7,5 +7,5 @@ import java.util.List;
 
 public record ShopPurchaseResponse(
         List<Reward> rewards,
-        CurrenciesResponse currenciesResponse
+        CurrenciesResponse currencies
 ) {}

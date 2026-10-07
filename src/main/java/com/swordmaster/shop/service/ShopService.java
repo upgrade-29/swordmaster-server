@@ -2,9 +2,9 @@ package com.swordmaster.shop.service;
 
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyType;
-import com.swordmaster.currency.service.CurrencyService;
-import com.swordmaster.shop.RewardType;
 import com.swordmaster.currency.dto.CurrenciesResponse;
+import com.swordmaster.currency.service.CurrencyService;
+import com.swordmaster.reward.RewardService;
 import com.swordmaster.shop.dto.Reward;
 import com.swordmaster.shop.dto.ShopPurchaseRequest;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
@@ -30,6 +30,7 @@ public class ShopService {
     private final UserRepository userRepository;
     private final ShopCatalog shopCatalog;
     private final CurrencyService currencyService;
+    private final RewardService rewardService;
 
 
     @Transactional
@@ -68,7 +69,7 @@ public class ShopService {
 
         //재화가 차감되었다면 유저에게 보상을 지급해야한다.
         for(Reward reward : rewards){
-            grantReward(userId,reward.rewardCode(),reward.rewardType(),reward.amount());
+            grantReward(userId,reward);
         }
 
         //차감 및 보상 완료 후의 재화를 재화 응답 dto 에 담음
@@ -88,12 +89,8 @@ public class ShopService {
         return response;
     }
 
-    private void grantReward(Long userId, String rewardCode, RewardType rewardType, long amount) {
-        //현재는 골드만 존재 이후 추가
-        switch (rewardType) {
-            case GOLD: currencyService.grant(userId, CurrencyType.GOLD,amount); break;
-
-        }
+    private void grantReward(Long userId, Reward reward) {
+        rewardService.reward(userId,reward);
     }
 
 }
