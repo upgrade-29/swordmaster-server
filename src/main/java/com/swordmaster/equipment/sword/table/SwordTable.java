@@ -1,4 +1,4 @@
-package com.swordmaster.equipment.sword;
+package com.swordmaster.equipment.sword.table;
 
 import com.swordmaster.common.table.GoogleSheetClient;
 import com.swordmaster.common.table.SheetTable;
@@ -18,7 +18,7 @@ public class SwordTable extends SheetTable<Sword> {
     public SwordTable(GoogleSheetClient sheets, @Value("${game-data.gid.swords}") long gid) {
         super(sheets, gid, Sword.class);    // 변환 후 검증까지 실행
 
-        // level 오름차순 정렬
+        // level의 오름차순 정렬
         byLevel = rows.stream()
                 .sorted(Comparator.comparingInt(Sword::level))
                 .toList();
@@ -52,23 +52,28 @@ public class SwordTable extends SheetTable<Sword> {
             if (sword.name() == null || sword.name().isBlank())
                 errors.add(at + "name이 비어 있습니다.");
 
-            // nextSuccessRate는 0 이상 1 이하 (Null 허용)
-            var rate = sword.nextSuccessRate();
+            // successRate는 0 이상 1 이하 (Null 허용)
+            var rate = sword.successRate();
 
             if (rate != null && (rate < 0 || rate > 1))
-                errors.add(at + "nextSuccessRate는 0 이상 1 이하여야 합니다. (Null 사용 가능)");
+                errors.add(at + "successRate는 0 이상 1 이하여야 합니다. (Null 사용 가능)");
 
-            // nextEnhanceCost는 0 이상 (Null 허용)
-            var cost = sword.nextEnhanceCost();
+            // enhanceCost는 0 이상 (Null 허용)
+            var cost = sword.enhanceCost();
 
             if (cost != null && cost < 0)
-                errors.add(at + "nextEnhanceCost는 0 이상이어야 합니다. (Null 사용 가능)");
+                errors.add(at + "enhanceCost는 0 이상이어야 합니다. (Null 사용 가능)");
 
             // 기타 컬럼은 각각 0 이상
             if (sword.sellPrice()   < 0) errors.add(at + "sellPrice는 0 이상이어야 합니다.");
             if (sword.attackPower() < 0) errors.add(at + "attackPower는 0 이상이어야 합니다.");
             if (sword.attackSpeed() < 0) errors.add(at + "attackSpeed는 0 이상이어야 합니다.");
             if (sword.maxHp()       < 0) errors.add(at + "maxHp는 0 이상이어야 합니다.");
+
+            // appearanceCode는 Not Blank
+            // name은 Not Blank
+            if (sword.appearanceCode() == null || sword.appearanceCode().isBlank())
+                errors.add(at + "name이 비어 있습니다.");
         }
     }
 

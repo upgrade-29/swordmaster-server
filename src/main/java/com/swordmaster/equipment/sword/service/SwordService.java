@@ -1,8 +1,8 @@
 package com.swordmaster.equipment.sword.service;
 
 import com.swordmaster.common.BusinessException;
-import com.swordmaster.equipment.sword.Sword;
-import com.swordmaster.equipment.sword.SwordTable;
+import com.swordmaster.equipment.sword.table.Sword;
+import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.equipment.sword.dto.SwordEnhanceResponse;
 import com.swordmaster.equipment.sword.dto.SwordResponse;
 import com.swordmaster.player.entity.Player;
@@ -37,10 +37,10 @@ public class SwordService {
         Sword  sword  = swordTable.findByLevel(player.getSwordLevel())
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "검의 정보가 없습니다."));
 
-        Double nextSuccessRate = sword.nextSuccessRate();
-        Long   nextEnhanceCost = sword.nextEnhanceCost();
+        Double successRate = sword.successRate();
+        Long   enhanceCost = sword.enhanceCost();
 
-        if (nextSuccessRate == null || nextEnhanceCost == null) {
+        if (successRate == null || enhanceCost == null) {
             throw new BusinessException("검을 강화할 수 없습니다.");
         }
 
@@ -48,7 +48,7 @@ public class SwordService {
         // 재화 처리 로직 (임시)
         /////////////////////////////////////////////////////////////////////////
 
-        int     rate      = (int) Math.round(nextSuccessRate * SCALE);
+        int     rate      = (int) Math.round(successRate * SCALE);
         int     random    = ThreadLocalRandom.current().nextInt(SCALE);   // 0 <= random < SCALE
         boolean success   = random < rate;
         int     nextLevel = success ? sword.level() + 1 : swordTable.getFirst().level();

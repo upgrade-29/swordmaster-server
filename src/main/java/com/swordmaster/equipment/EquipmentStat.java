@@ -1,9 +1,8 @@
 package com.swordmaster.equipment;
 
 public enum EquipmentStat {
-    ATTACK_POWER,
-    ATTACK_SPEED,
+    CRIT_RATE,
+    LIFESTEAL,
     MAX_HP,
-    CRITICAL_RATE,
-    CRITICAL_DAMAGE
+    ATTACK_SPEED
 }

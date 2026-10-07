@@ -3,7 +3,7 @@ package com.swordmaster.player.service;
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.service.CurrencyService;
-import com.swordmaster.equipment.sword.SwordTable;
+import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.player.dto.PlayerResponse;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.entity.PlayerArtifact;
