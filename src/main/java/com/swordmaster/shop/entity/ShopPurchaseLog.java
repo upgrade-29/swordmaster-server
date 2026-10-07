@@ -2,7 +2,7 @@ package com.swordmaster.shop.entity;
 
 
 import com.swordmaster.currency.CurrencyType;
-import com.swordmaster.shop.dto.Reward;
+import com.swordmaster.reward.Reward;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
 import com.swordmaster.shop.table.ShopProduct;
 import jakarta.persistence.*;

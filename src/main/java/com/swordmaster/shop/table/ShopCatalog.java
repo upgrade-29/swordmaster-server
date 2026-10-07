@@ -1,6 +1,6 @@
 package com.swordmaster.shop.table;
 
-import com.swordmaster.shop.dto.Reward;
+import com.swordmaster.reward.Reward;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

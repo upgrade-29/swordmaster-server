@@ -1,7 +1,7 @@
 package com.swordmaster.shop.table;
 
 import com.swordmaster.shop.RewardType;
-import com.swordmaster.shop.dto.Reward;
+import com.swordmaster.reward.Reward;
 
 public record ShopProductReward(
         String     productCode,     // 연결된 상품 코드

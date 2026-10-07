@@ -3,7 +3,6 @@ package com.swordmaster.reward;
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.service.CurrencyService;
-import com.swordmaster.shop.dto.Reward;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

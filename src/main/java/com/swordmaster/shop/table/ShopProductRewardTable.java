@@ -3,7 +3,7 @@ package com.swordmaster.shop.table;
 import com.swordmaster.common.table.GoogleSheetClient;
 import com.swordmaster.common.table.SheetTable;
 import com.swordmaster.shop.RewardType;
-import com.swordmaster.shop.dto.Reward;
+import com.swordmaster.reward.Reward;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 

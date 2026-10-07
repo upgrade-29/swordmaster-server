@@ -1,6 +1,7 @@
 package com.swordmaster.shop.dto;
 
 import com.swordmaster.currency.dto.CurrenciesResponse;
+import com.swordmaster.reward.Reward;
 
 import java.util.List;
 

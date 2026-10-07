@@ -1,4 +1,4 @@
-package com.swordmaster.shop.dto;
+package com.swordmaster.reward;
 
 import com.swordmaster.shop.RewardType;
 
