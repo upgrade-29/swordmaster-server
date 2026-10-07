@@ -1,6 +1,6 @@
 package com.swordmaster.shop.table;
 
-import com.swordmaster.shop.RewardType;
+import com.swordmaster.reward.RewardType;
 import com.swordmaster.reward.Reward;
 
 public record ShopProductReward(

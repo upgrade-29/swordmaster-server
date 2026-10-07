@@ -30,7 +30,10 @@ public class ShopFacade {
                 return shopService.purchase(userId, request);
 
             } catch (ConcurrencyFailureException e) {        // 비관적·낙관적 락 예외의 공통 부모
+                // 재시도 대상: 낙관적 락 충돌(version 불일치) 또는 데드락(1213)
+                // 그 외(락 대기 시간 초과 1205 등)는 이미 오래 기다린 요청이므로 바로 실패
                 boolean retryable = e instanceof OptimisticLockingFailureException || isDeadlock(e);
+
                 if (retry >= MAX_RETRY || !retryable) {
                     log.warn("상점 구매 동시성 충돌로 실패: userId={}, requestId={}, 시도={}회",
                             userId, request.requestId(), retry + 1, e);

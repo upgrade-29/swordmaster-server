@@ -4,6 +4,7 @@ package com.swordmaster.shop;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.reward.Reward;
+import com.swordmaster.reward.RewardType;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
 import com.swordmaster.shop.entity.ShopPurchaseLog;
 import com.swordmaster.shop.repository.ShopPurchaseLogRepository;
