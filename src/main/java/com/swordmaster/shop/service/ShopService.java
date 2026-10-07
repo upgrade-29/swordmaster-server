@@ -43,9 +43,16 @@ public class ShopService {
         //만약 요청으로 받은 상품 코드와 시트에서 가져온 데이터의 상품에 일치하는 것이 없다면
         //PRODUCT_NOT_FOUND 로 오류를 처리
 
+
         //4. 구매를 요청한 유저의 재화를 차감하고 보상을 지급
         //todo: player 쪽의 재화 변동을 반영하고 보상테이블대로 보상을 지급하는 로직이 필요
         //재화가 부족한 경우 골드라면 NOT_ENOUGH_GOLD 다이아라면 NOT_ENOUGH_DIAMOND 로 처리
+        //일단 상품코드에 해당하는 시트의 상품이 어떤 재화를 소모하는지를 확인한다.
+        //만약 사용하는 재화가 골드라면? 우선 현재 유저의 재화가 이 가격을 지불할 수 있는지를 확인(지금은 has를 썼는데 currencies 를 생각하면 아예 전체 재화를 들고오는게 나을지도
+        //if(currencyService.has(userId,CurrencyType.GOLD,재화 가격)) throw new BusinessException(HttpStatus.Conflict, "NOT_ENOUGH_GOLD");
+        //재화가 충분할 시 유저의 재화에서 가격만큼 차감을 시도
+        //long left= currencyService.consume(userId,CurrencyType.GOLD,재화가격)
+        //재화가 차감되었다면 유저에게 보상을 지급해야한다. 보상은 재화가 아닌 것들도 있으니 따로 구현이 필요
 
 
         //5.구매를 위한 다른 작업들이 전부 처리되었다면 구매기록을 저장하고 응답을 반환
