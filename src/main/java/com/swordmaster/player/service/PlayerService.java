@@ -36,7 +36,7 @@ public class PlayerService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
 
         List<PlayerArtifact>    artifacts  = playerArtifactRepository.findAllByPlayer_User_Id(userId);
-        Map<CurrencyType, Long> currencies = currencyService.getAll(userId);
+        Map<CurrencyType, Long> currencies = currencyService.getAll(player);
 
         return PlayerResponse.of(player, currencies, artifacts);
     }

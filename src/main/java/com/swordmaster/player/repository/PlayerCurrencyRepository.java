@@ -1,6 +1,7 @@
 package com.swordmaster.player.repository;
 
 import com.swordmaster.currency.CurrencyType;
+import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.entity.PlayerCurrency;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -12,10 +13,10 @@ import java.util.Optional;
 
 public interface PlayerCurrencyRepository extends JpaRepository<PlayerCurrency, Long> {
     // 플레이어 재화 전체 반환
-    List<PlayerCurrency> findAllByPlayer_User_Id(Long userId);
+    List<PlayerCurrency> findAllByPlayer(Player player);
 
     // 플레이어의 특정 재화 반환
-    Optional<PlayerCurrency> findByPlayer_User_IdAndType(Long userId, CurrencyType type);
+    Optional<PlayerCurrency> findByPlayerAndType(Player player, CurrencyType type);
 
     // 재화의 종류 추가 시 모든 플레이어에 대하여 새로운 행을 생성
     @Modifying
