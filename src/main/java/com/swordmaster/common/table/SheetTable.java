@@ -1,4 +1,4 @@
-package com.swordmaster.common.sheet;
+package com.swordmaster.common.table;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
