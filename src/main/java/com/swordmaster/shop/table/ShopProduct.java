@@ -1,6 +1,6 @@
 package com.swordmaster.shop.table;
 
-import com.swordmaster.shop.CurrencyType;
+import com.swordmaster.currency.CurrencyType;
 
 public record ShopProduct(
         String       productCode,   // 상품 코드 (구매 요청의 productCode)

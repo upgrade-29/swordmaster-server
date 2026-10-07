@@ -1,7 +1,7 @@
 package com.swordmaster.shop.entity;
 
 
-import com.swordmaster.shop.CurrencyType;
+import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.shop.dto.Reward;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
 import com.swordmaster.shop.table.ShopProduct;

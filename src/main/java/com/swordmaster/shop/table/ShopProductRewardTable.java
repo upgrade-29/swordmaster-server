@@ -1,7 +1,7 @@
 package com.swordmaster.shop.table;
 
-import com.swordmaster.common.sheet.GoogleSheetClient;
-import com.swordmaster.common.sheet.SheetTable;
+import com.swordmaster.common.table.GoogleSheetClient;
+import com.swordmaster.common.table.SheetTable;
 import com.swordmaster.shop.RewardType;
 import com.swordmaster.shop.dto.Reward;
 import org.springframework.beans.factory.annotation.Value;

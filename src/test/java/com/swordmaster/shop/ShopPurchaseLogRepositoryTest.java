@@ -1,7 +1,8 @@
 package com.swordmaster.shop;
 
 
-import com.swordmaster.shop.dto.Currencies;
+import com.swordmaster.currency.CurrencyType;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.shop.dto.Reward;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
 import com.swordmaster.shop.entity.ShopPurchaseLog;
@@ -34,7 +35,7 @@ class ShopPurchaseLogRepositoryTest {
             new Reward(RewardType.GOLD, null, 500L),
             new Reward(RewardType.ITEM, "ITEM_001", 1L));
     private static final ShopPurchaseResponse RESPONSE =
-            new ShopPurchaseResponse(REWARDS, new Currencies(900L, 10));
+            new ShopPurchaseResponse(REWARDS, new CurrenciesResponse(900L, 10));
 
     private ShopPurchaseLog newLog(Long userId, UUID requestId) {
         return new ShopPurchaseLog(userId, requestId, PRODUCT, REWARDS, RESPONSE);

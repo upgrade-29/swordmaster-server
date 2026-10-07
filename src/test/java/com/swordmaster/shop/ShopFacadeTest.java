@@ -1,7 +1,7 @@
 package com.swordmaster.shop;
 
 import com.swordmaster.common.BusinessException;
-import com.swordmaster.shop.dto.Currencies;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.shop.dto.ShopPurchaseRequest;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
 import com.swordmaster.shop.facade.ShopFacade;
@@ -32,7 +32,7 @@ class ShopFacadeTest {
 
     private final Long userId = 1L;
     private final ShopPurchaseRequest request = new ShopPurchaseRequest(UUID.randomUUID(), "TEST_001");
-    private final ShopPurchaseResponse response = new ShopPurchaseResponse(List.of(), new Currencies(0L, 0));
+    private final ShopPurchaseResponse response = new ShopPurchaseResponse(List.of(), new CurrenciesResponse(0L, 0));
 
     // MySQL 에러코드를 가진 락 예외를 만든다 (1213 = 데드락, 1205 = 락 대기 시간 초과)
     private static PessimisticLockingFailureException lockError(int mysqlErrorCode) {
