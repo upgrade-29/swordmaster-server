@@ -31,6 +31,9 @@ public class FilterConfig {
                                 "/api/auth/signup",
                                 "/api/auth/login"
                         ).permitAll() //로그인과 회원가입 시에는 토큰이 존재하지 않는다.
+                        // HTTP 연결을 허용하고 STOMP CONNECT에서 JWT 인증
+                        .requestMatchers("/ws").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(errors -> errors

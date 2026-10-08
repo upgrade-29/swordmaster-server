@@ -1,5 +1,6 @@
 package com.swordmaster.user.entity;
 
+import com.swordmaster.common.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -27,6 +28,10 @@ public class User {
 
     @Column(nullable = false, length = 10)
     private String nickname;
+
+    @Enumerated(EnumType.STRING) //db에서 관리자로 변경이 가능, 그래야만 시스템 공지를 사용할 수 있음
+    @Column(nullable = false, length = 20)
+    private UserRole role = UserRole.USER;
 
     private Instant lastLoginAt;
 
