@@ -37,11 +37,11 @@ class SplitMix64Test {
     }
 
     @Test
-    void forSubStage_sameAsSeedPlusIndex() {
+    void forSubStage_sameAsMixOfSeedPlusIndex() {
         long battleSeed = 8412093746512038871L;
 
         for (int index = 0; index < 5; index++) {
-            SplitMix64 expected = new SplitMix64(battleSeed + index);
+            SplitMix64 expected = new SplitMix64(SplitMix64.mix(battleSeed + index));
             SplitMix64 actual   = SplitMix64.forSubStage(battleSeed, index);
 
             for (int i = 0; i < 3; i++) assertEquals(expected.nextLong(), actual.nextLong());
@@ -52,7 +52,7 @@ class SplitMix64Test {
     void forSubStage_overflowMatchesUnsigned() {
         // Long.MAX_VALUE + 1 은 Java에서 음수지만 C# ulong 9223372036854775808 과 같은 비트
         SplitMix64 actual   = SplitMix64.forSubStage(Long.MAX_VALUE, 1);
-        SplitMix64 expected = new SplitMix64(Long.parseUnsignedLong("9223372036854775808"));
+        SplitMix64 expected = new SplitMix64(SplitMix64.mix(Long.parseUnsignedLong("9223372036854775808")));
 
         assertEquals(expected.nextLong(), actual.nextLong());
     }
