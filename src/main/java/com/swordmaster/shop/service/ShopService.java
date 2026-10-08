@@ -15,7 +15,6 @@ import com.swordmaster.shop.entity.ShopPurchaseLog;
 import com.swordmaster.shop.repository.ShopPurchaseLogRepository;
 import com.swordmaster.shop.table.ShopCatalog;
 import com.swordmaster.shop.table.ShopProduct;
-import com.swordmaster.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,6 @@ import java.util.Optional;
 @Service
 public class ShopService {
     private final ShopPurchaseLogRepository shopPurchaseLogRepository;
-    private final UserRepository userRepository;
     private final PlayerRepository playerRepository;
 
     private final ShopCatalog shopCatalog;
@@ -60,8 +58,9 @@ public class ShopService {
         CurrencyType priceType = product.priceType();
 
         //해당 유저에게 재화가 충분한지 검사
-//        if(!currencyService.has(userId, priceType,product.price()))
-//            throw new BusinessException(HttpStatus.CONFLICT,"NOT_ENOUGH_"+priceType.name());
+        Long currentCurrency = currencyService.getAll(player).get(priceType);
+        if(currentCurrency < product.price())
+            throw new BusinessException(HttpStatus.CONFLICT,"NOT_ENOUGH_"+priceType.name());
 
         //유저의 재화에서 가격만큼 차감을 시도.
         currencyService.consume(player, priceType,product.price(), CurrencyReason.PURCHASE);
