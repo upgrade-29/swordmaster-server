@@ -1,6 +1,7 @@
 package com.swordmaster.equipment.sword.controller;
 
 import com.swordmaster.equipment.sword.dto.SwordEnhanceResponse;
+import com.swordmaster.equipment.sword.dto.SwordSellResponse;
 import com.swordmaster.equipment.sword.service.SwordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,4 +19,7 @@ public class SwordController {
     public SwordEnhanceResponse enhance(@AuthenticationPrincipal Long userId) {
         return swordService.enhance(userId);
     }
+
+    @PostMapping("/sell")
+    public SwordSellResponse sell(@AuthenticationPrincipal Long userId) { return swordService.sell(userId); }
 }

@@ -4,6 +4,7 @@ import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.service.CurrencyService;
+import com.swordmaster.equipment.sword.dto.SwordSellResponse;
 import com.swordmaster.equipment.sword.table.Sword;
 import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.equipment.sword.dto.SwordEnhanceResponse;
@@ -27,13 +28,11 @@ public class SwordService {
     private static final int          SCALE         = 10_000;
     private static final CurrencyType CURRENCY_TYPE = CurrencyType.GOLD;
 
-    // 강화 시도 (임시)
+    // 강화
     @Transactional
     public SwordEnhanceResponse enhance(Long userId) {
-        Player player = findPlayer(userId);
-        Sword  sword  = swordTable.findByLevel(player.getSwordLevel())
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "검의 정보가 없습니다."));
-
+        Player player      = findPlayer(userId);
+        Sword  sword       = findSword(player);
         Double successRate = sword.successRate();
         Long   enhanceCost = sword.enhanceCost();
 
@@ -53,9 +52,31 @@ public class SwordService {
         return new SwordEnhanceResponse(success, nextLevel, currency);
     }
 
-    // 플레이어 검색
+    // 판매
+    public SwordSellResponse sell(Long userId) {
+        Player player = findPlayer(userId);
+        Sword  sword  = findSword(player);
+        long   reward = sword.sellPrice();
+        int    level  = swordTable.getFirst().level();
+
+        // 재화 획득
+        long currency = currencyService.grant(player, CURRENCY_TYPE, reward, CurrencyReason.EQUIP_SELL);
+
+        player.changeSwordLevel(level);
+        playerRepository.save(player);
+
+        return new SwordSellResponse(level, reward, currency);
+    }
+
+    // Player 검색
     private Player findPlayer(Long userId) {
         return playerRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
+    }
+
+    // Sword 검색
+    private Sword findSword(Player player) {
+        return swordTable.findByLevel(player.getSwordLevel())
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "검의 정보가 없습니다."));
     }
 }
