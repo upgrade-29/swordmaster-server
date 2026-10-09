@@ -1,5 +1,6 @@
-package com.swordmaster.player.entity;
+package com.swordmaster.equipment.artifact.entity;
 
+import com.swordmaster.player.entity.Player;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

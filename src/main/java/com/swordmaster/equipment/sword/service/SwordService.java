@@ -10,6 +10,7 @@ import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.equipment.sword.dto.SwordEnhanceResponse;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.repository.PlayerRepository;
+import com.swordmaster.player.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Transactional(readOnly = true)
 public class SwordService {
     private final SwordTable       swordTable;
+    private final PlayerService    playerService;
     private final PlayerRepository playerRepository;
     private final CurrencyService  currencyService;
 
@@ -31,8 +33,8 @@ public class SwordService {
     // 강화
     @Transactional
     public SwordEnhanceResponse enhance(Long userId) {
-        Player player      = findPlayer(userId);
-        Sword  sword       = findSword(player);
+        Player player      = playerService.find(userId);
+        Sword  sword       = find(player);
         Double successRate = sword.successRate();
         Long   enhanceCost = sword.enhanceCost();
 
@@ -54,8 +56,8 @@ public class SwordService {
 
     // 판매
     public SwordSellResponse sell(Long userId) {
-        Player player = findPlayer(userId);
-        Sword  sword  = findSword(player);
+        Player player = playerService.find(userId);
+        Sword  sword  = find(player);
         long   reward = sword.sellPrice();
         int    level  = swordTable.getFirst().level();
 
@@ -68,14 +70,8 @@ public class SwordService {
         return new SwordSellResponse(level, reward, currency);
     }
 
-    // Player 검색
-    private Player findPlayer(Long userId) {
-        return playerRepository.findByUser_Id(userId)
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
-    }
-
-    // Sword 검색
-    private Sword findSword(Player player) {
+    // 공통 (Sword 검색)
+    private Sword find(Player player) {
         return swordTable.findByLevel(player.getSwordLevel())
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "검의 정보가 없습니다."));
     }

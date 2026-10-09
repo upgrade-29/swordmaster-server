@@ -1,8 +1,8 @@
-package com.swordmaster.player.repository;
+package com.swordmaster.currency.repository;
 
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.entity.PlayerCurrency;
+import com.swordmaster.currency.entity.PlayerCurrency;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface PlayerCurrencyRepository extends JpaRepository<PlayerCurrency, Long> {
+public interface CurrencyRepository extends JpaRepository<PlayerCurrency, Long> {
     // 플레이어 재화 전체 반환
     List<PlayerCurrency> findAllByPlayer(Player player);
 

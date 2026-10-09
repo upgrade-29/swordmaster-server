@@ -1,7 +1,7 @@
 package com.swordmaster.currency.repository;
 
 import com.swordmaster.currency.entity.CurrencyHistory;
-import com.swordmaster.player.entity.PlayerCurrency;
+import com.swordmaster.currency.entity.PlayerCurrency;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 

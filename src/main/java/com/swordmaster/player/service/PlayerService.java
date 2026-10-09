@@ -6,8 +6,8 @@ import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.player.dto.PlayerResponse;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.entity.PlayerArtifact;
-import com.swordmaster.player.repository.PlayerArtifactRepository;
+import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
+import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.player.repository.PlayerRepository;
 import com.swordmaster.user.entity.User;
 import com.swordmaster.user.repository.UserRepository;
@@ -24,18 +24,16 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PlayerService {
-    private final PlayerRepository         playerRepository;
-    private final PlayerArtifactRepository playerArtifactRepository;
-    private final UserRepository           userRepository;
-    private final CurrencyService          currencyService;
-    private final SwordTable               swordTable;
+    private final PlayerRepository   playerRepository;
+    private final ArtifactRepository artifactRepository;
+    private final UserRepository     userRepository;
+    private final CurrencyService    currencyService;
+    private final SwordTable         swordTable;
 
     // 조회 (모든 정보)
     public PlayerResponse getMe(Long userId) {
-        Player player = playerRepository.findByUser_Id(userId)
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
-
-        List<PlayerArtifact>    artifacts  = playerArtifactRepository.findAllByPlayer_User_Id(userId);
+        Player                  player     = find(userId);
+        List<PlayerArtifact>    artifacts  = artifactRepository.findAllByPlayer(player);
         Map<CurrencyType, Long> currencies = currencyService.getAll(player);
 
         return PlayerResponse.of(player, currencies, artifacts);
@@ -67,5 +65,11 @@ public class PlayerService {
 
         // 생성 시 인벤토리는 빈 상태로 생성되므로 응답 객체에 빈 리스트로 초기화
         return PlayerResponse.of(player, currencies, List.of());
+    }
+
+    // 공통 (모든 하위 데이터 접근 시에 사용)
+    public Player find(Long userId) {
+        return playerRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
     }
 }

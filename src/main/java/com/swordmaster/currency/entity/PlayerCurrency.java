@@ -1,6 +1,7 @@
-package com.swordmaster.player.entity;
+package com.swordmaster.currency.entity;
 
 import com.swordmaster.currency.CurrencyType;
+import com.swordmaster.player.entity.Player;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

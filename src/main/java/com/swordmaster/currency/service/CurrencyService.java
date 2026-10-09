@@ -6,8 +6,8 @@ import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.entity.CurrencyHistory;
 import com.swordmaster.currency.repository.CurrencyHistoryRepository;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.entity.PlayerCurrency;
-import com.swordmaster.player.repository.PlayerCurrencyRepository;
+import com.swordmaster.currency.entity.PlayerCurrency;
+import com.swordmaster.currency.repository.CurrencyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,7 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CurrencyService {
-    private final PlayerCurrencyRepository  playerCurrencyRepository;
+    private final CurrencyRepository        currencyRepository;
     private final CurrencyHistoryRepository currencyHistoryRepository;
 
     // 새 플레이어 생성 시 해당 플레이어의 모든 재화 행 생성
@@ -30,7 +30,7 @@ public class CurrencyService {
         Map<CurrencyType, Long> result = new EnumMap<>(CurrencyType.class);
 
         for (CurrencyType type : CurrencyType.values()) {
-            PlayerCurrency currency = playerCurrencyRepository.save(new PlayerCurrency(player, type));
+            PlayerCurrency currency = currencyRepository.save(new PlayerCurrency(player, type));
 
             result.put(currency.getType(), currency.getAmount());
         }
@@ -41,7 +41,7 @@ public class CurrencyService {
     // 조회 (전체)
     public Map<CurrencyType, Long> getAll(Player player) {
         Map<CurrencyType, Long> result     = new EnumMap<>(CurrencyType.class);
-        List<PlayerCurrency>    currencies = playerCurrencyRepository.findAllByPlayer(player);
+        List<PlayerCurrency>    currencies = currencyRepository.findAllByPlayer(player);
 
         for (PlayerCurrency currency : currencies)
             result.put(currency.getType(), currency.getAmount());
@@ -103,7 +103,7 @@ public class CurrencyService {
 
     // 공통 (조회)
     private PlayerCurrency find(Player player, CurrencyType type) {
-        return playerCurrencyRepository.findByPlayerAndType(player, type)
+        return currencyRepository.findByPlayerAndType(player, type)
                 .orElseThrow(() -> new BusinessException(
                         HttpStatus.INTERNAL_SERVER_ERROR, type + "의 재화 정보가 없습니다."
                 ));
@@ -121,7 +121,7 @@ public class CurrencyService {
 
     // 공통 (저장 후에 결과 반환)
     private long saveAndRecord(PlayerCurrency currency, long delta, CurrencyReason reason, String memo) {
-        playerCurrencyRepository.save(currency);
+        currencyRepository.save(currency);
 
         currencyHistoryRepository.save(
                 new CurrencyHistory(
