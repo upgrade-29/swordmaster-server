@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/equipment/artifacts")
+@RequestMapping("/api/artifacts")
 @RequiredArgsConstructor
 public class ArtifactController {
     private final ArtifactService artifactService;
