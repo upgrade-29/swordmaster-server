@@ -7,18 +7,25 @@ import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class ArtifactTable extends SheetTable<Artifact> {
-    private final List<Artifact> byCode;
+    private final List<Artifact>        sorted;
+    private final Map<String, Artifact> byCode;
 
     public ArtifactTable(GoogleSheetClient sheets, @Value("${game-data.gid.artifacts}") long gid) {
         super(sheets, gid, Artifact.class);     // 변환 후 검증까지 실행
 
-        // code의 오름차순 정렬
-        byCode = rows.stream()
+        sorted = rows.stream()
                 .sorted(Comparator.comparing(Artifact::code))
                 .toList();
+
+        byCode = rows.stream()
+                .collect(Collectors.toUnmodifiableMap(Artifact::code, Function.identity()));
     }
 
     // 검증
@@ -52,10 +59,9 @@ public class ArtifactTable extends SheetTable<Artifact> {
 
     // 검색
     @Override
-    public List<Artifact> getAll() { return byCode; }
+    public List<Artifact> getAll() { return sorted; }
 
-//    // 열거형의 제한과 그에 따른 모든 조합이 존재한다는 것이 검증되므로 항상 값이 존재
-//    public Artifact findByKey(EquipmentStat stat, EquipmentRarity rarity) {
-//        return byKey.get(new Key(stat, rarity));
-//    }
+    public Optional<Artifact> findByCode(String code) {
+        return code == null ? Optional.empty() : Optional.ofNullable(byCode.get(code));
+    }
 }
