@@ -1,6 +1,8 @@
 package com.swordmaster.currency.service;
 
 import com.swordmaster.common.BusinessException;
+import com.swordmaster.common.table.constant.ConstantKey;
+import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.entity.CurrencyHistory;
@@ -19,18 +21,26 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class CurrencyService {
     private final CurrencyRepository        currencyRepository;
     private final CurrencyHistoryRepository currencyHistoryRepository;
+    private final ConstantTable             constantTable;
 
     // 새 플레이어 생성 시 해당 플레이어의 모든 재화 행 생성
-    @Transactional
     public Map<CurrencyType, Long> createAll(Player player) {
         Map<CurrencyType, Long> result = new EnumMap<>(CurrencyType.class);
 
         for (CurrencyType type : CurrencyType.values()) {
-            PlayerCurrency currency = currencyRepository.save(new PlayerCurrency(player, type));
+            PlayerCurrency currency = new PlayerCurrency(player, type);
+
+            // 초기 자본금 지급
+            if (currency.getType() == CurrencyType.GOLD) {
+                long amount = constantTable.getLong(ConstantKey.INITIAL_GOLD);      // 상수 테이블에서 해당 값을 불러옴
+
+                grant(player, type, amount, CurrencyReason.PLAYER_CREATE);          // 증가 후 내역도 같이 저장
+            }
+            else currencyRepository.save(currency);
 
             result.put(currency.getType(), currency.getAmount());
         }
@@ -38,6 +48,7 @@ public class CurrencyService {
         return result;
     }
 
+    @Transactional(readOnly = true)
     // 조회 (전체)
     public Map<CurrencyType, Long> getAll(Player player) {
         Map<CurrencyType, Long> result     = new EnumMap<>(CurrencyType.class);
@@ -49,18 +60,7 @@ public class CurrencyService {
         return result;
     }
 
-//    // 조회 (단일)
-//    public long getAmount(Player player, CurrencyType type) {
-//        return find(player, type).getAmount();
-//    }
-//
-//    // 조회 (유효성 검사)
-//    public boolean has(Player player, CurrencyType type, long value) {
-//        return find(player, type).has(value);
-//    }
-
     // 변경 (지급)
-    @Transactional
     public long grant(Player player, CurrencyType type, long value, CurrencyReason reason) {
         checkPositive(value);   // 양수인지 확인
 
@@ -72,7 +72,6 @@ public class CurrencyService {
     }
 
     // 변경 (차감)
-    @Transactional
     public long consume(Player player, CurrencyType type, long value, CurrencyReason reason) {
         checkPositive(value);   // 양수인지 확인
 
@@ -86,7 +85,6 @@ public class CurrencyService {
     }
 
     // 변경 (관리자)
-    @Transactional
     public long adjust(Player player, CurrencyType type, long targetAmount, String memo) {
         if (targetAmount < 0)               throw new BusinessException("조정할 값이 음수입니다.");
         if (memo == null || memo.isBlank()) throw new BusinessException("메모를 입력해주세요.");

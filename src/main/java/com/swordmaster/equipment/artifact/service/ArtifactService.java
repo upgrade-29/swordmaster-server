@@ -1,6 +1,8 @@
 package com.swordmaster.equipment.artifact.service;
 
 import com.swordmaster.common.BusinessException;
+import com.swordmaster.common.table.constant.ConstantKey;
+import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.service.CurrencyService;
@@ -22,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -35,14 +38,42 @@ public class ArtifactService {
     private final ArtifactRepository   artifactRepository;
     private final CurrencyService      currencyService;
     private final IdempotencyService   idempotencyService;
+    private final ConstantTable        constantTable;
 
-    // 임시 설정 값 (클라이언트와 일치시키기 위해 외부에서 불러올 필요가 있음)
+    // 임시 설정 값
     private static final int          SLOT_COUNT    = 3;
     private static final CurrencyType CURRENCY_TYPE = CurrencyType.GOLD;
 
+    // 생성
+    public List<ArtifactResponse> createDefault(Player player) {
+        List<PlayerArtifact> artifacts = new ArrayList<>();
+        List<String>         codeList  = constantTable.getTextList(ConstantKey.STARTER_ARTIFACTS);
+
+        for (String code : codeList) {
+            if (!artifactTable.existsByCode(code)) throw new BusinessException(HttpStatus.NOT_FOUND, "아티팩트 정보가 없습니다.");
+
+            artifacts.add(new PlayerArtifact(player, code));
+        }
+
+        artifactRepository.saveAll(artifacts);
+
+        return artifacts.stream()
+                .map(ArtifactResponse::from)
+                .toList();
+    }
+
+    // 조회
+    public List<ArtifactResponse> getAll(Player player) {
+        List<PlayerArtifact> artifacts = artifactRepository.findAllByPlayer(player);
+
+        return artifacts.stream()
+                .map(ArtifactResponse::from)
+                .toList();
+    }
+
     // 강화
     public ArtifactEnhanceResponse enhance(Long userId, String code, ArtifactEnhanceRequest request) {
-        Player player = playerService.find(userId);
+        Player player = playerService.getMe(userId);
 
         return idempotencyService.execute(
                 userId,
@@ -83,7 +114,7 @@ public class ArtifactService {
     public List<ArtifactResponse> equip(Long userId, String code, int slot) {
         if (slot <= 0 || slot > SLOT_COUNT) throw new BusinessException("슬롯의 범위를 벗어났습니다.");
 
-        Player               player   = playerService.find(userId);
+        Player               player   = playerService.getMe(userId);
         List<PlayerArtifact> equipped = doRemove(player, slot);     // 아티팩트 해제
         PlayerArtifact       required = find(player, code);
 
@@ -92,17 +123,23 @@ public class ArtifactService {
         artifactRepository.save(required);
         equipped.add(required);
 
-        return convertSortedBySlot(equipped);
+        return equipped.stream()
+                .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))
+                .map(ArtifactResponse::from)
+                .toList();
     }
 
     // 해제
     public List<ArtifactResponse> remove(Long userId, int slot) {
         if (slot <= 0 || slot > SLOT_COUNT) throw new BusinessException("슬롯의 범위를 벗어났습니다.");
 
-        Player               player   = playerService.find(userId);
+        Player               player   = playerService.getMe(userId);
         List<PlayerArtifact> equipped = doRemove(player, slot);
 
-        return convertSortedBySlot(equipped);
+        return equipped.stream()
+                .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))
+                .map(ArtifactResponse::from)
+                .toList();
     }
 
     private List<PlayerArtifact> doRemove(Player player, int slot) {
@@ -136,13 +173,5 @@ public class ArtifactService {
     private ArtifactEnhance find(EquipmentGrade grade, int level) {
         return artifactEnhanceTable.findByGradeAndLevel(grade, level)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "아티팩트 강화 정보가 없습니다."));
-    }
-
-    // 공통 (변환)
-    private List<ArtifactResponse> convertSortedBySlot(List<PlayerArtifact> artifacts) {
-        return artifacts.stream()
-                .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))
-                .map(ArtifactResponse::from)
-                .toList();
     }
 }

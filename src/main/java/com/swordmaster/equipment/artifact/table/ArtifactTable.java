@@ -61,6 +61,8 @@ public class ArtifactTable extends SheetTable<Artifact> {
     @Override
     public List<Artifact> getAll() { return sorted; }
 
+    public boolean existsByCode(String code) { return byCode.containsKey(code); }
+
     public Optional<Artifact> findByCode(String code) {
         return code == null ? Optional.empty() : Optional.ofNullable(byCode.get(code));
     }

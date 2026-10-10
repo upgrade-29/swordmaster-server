@@ -36,7 +36,7 @@ public class SwordService {
 
     // 강화
     public SwordEnhanceResponse enhance(Long userId, SwordRequest request) {
-        Player player = playerService.find(userId);
+        Player player = playerService.getMe(userId);
 
         return idempotencyService.execute(
                 userId,
@@ -70,7 +70,7 @@ public class SwordService {
 
     // 판매
     public SwordSellResponse sell(Long userId, SwordRequest request) {
-        Player player = playerService.find(userId);
+        Player player = playerService.getMe(userId);
 
         return idempotencyService.execute(
                 userId,
