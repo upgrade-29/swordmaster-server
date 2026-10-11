@@ -10,7 +10,7 @@ import java.time.Instant;
 public record BattleSession(
         String     battleId,
         int        stage,
-        long       battleSeed,          // 세부 스테이지 시드 = battleSeed + subStageIndex
+        long       battleSeed,          // 세부 스테이지 시드 = SplitMix64.mix(battleSeed + subStageIndex)
         CombatStat playerStat,          // 전투 시작 시점의 스탯 스냅샷 (전투 중 강화/장착 변경 무시)
         int        subStageIndex,       // 지금 진행할 세부 스테이지
         double     playerHp,            // 이 세부 스테이지를 시작할 때의 체력
@@ -50,6 +50,15 @@ public record BattleSession(
                 subStageIndex + 1, nextPlayerHp, nextAccumulatedGold,
                 gameDataVersion, startedAt, now,
                 new LastReport(subStageIndex, response)
+        );
+    }
+
+    // 재접속하면 클라는 지금 세부 스테이지를 처음부터 다시 하므로 시간 검증도 지금부터 잼
+    public BattleSession restartSubStage(Instant now) {
+        return new BattleSession(
+                battleId, stage, battleSeed, playerStat,
+                subStageIndex, playerHp, accumulatedGold,
+                gameDataVersion, startedAt, now, lastReport
         );
     }
 

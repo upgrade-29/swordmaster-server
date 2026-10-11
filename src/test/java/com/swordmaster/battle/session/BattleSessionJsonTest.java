@@ -61,7 +61,7 @@ class BattleSessionJsonTest {
                 true,
                 new BattleRewards(480, List.of("ART_FLAME_RING")),
                 Map.of(CurrencyType.GOLD, 15480L, CurrencyType.DIAMOND, 120L),
-                new StageProgress(12, NOW),
+                new StageProgress(12),
                 List.of(),
                 NOW
         );
