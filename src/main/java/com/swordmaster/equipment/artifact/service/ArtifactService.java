@@ -5,6 +5,7 @@ import com.swordmaster.common.table.constant.ConstantKey;
 import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.artifact.dto.ArtifactEnhanceRequest;
@@ -46,27 +47,27 @@ public class ArtifactService {
 
     // 생성
     public List<ArtifactResponse> createDefault(Player player) {
-        List<PlayerArtifact> artifacts = new ArrayList<>();
-        List<String>         codeList  = constantTable.getTextList(ConstantKey.STARTER_ARTIFACTS);
+        List<PlayerArtifact> playerArtifacts = new ArrayList<>();
+        List<String>         codeList        = constantTable.getTextList(ConstantKey.STARTER_ARTIFACTS);
 
         for (String code : codeList) {
             if (!artifactTable.existsByCode(code)) throw new BusinessException(HttpStatus.NOT_FOUND, "아티팩트 정보가 없습니다.");
 
-            artifacts.add(new PlayerArtifact(player, code));
+            playerArtifacts.add(new PlayerArtifact(player, code));
         }
 
-        artifactRepository.saveAll(artifacts);
+        artifactRepository.saveAll(playerArtifacts);
 
-        return artifacts.stream()
+        return playerArtifacts.stream()
                 .map(ArtifactResponse::from)
                 .toList();
     }
 
     // 조회
     public List<ArtifactResponse> getAll(Player player) {
-        List<PlayerArtifact> artifacts = artifactRepository.findAllByPlayer(player);
+        List<PlayerArtifact> playerArtifacts = artifactRepository.findAllByPlayer(player);
 
-        return artifacts.stream()
+        return playerArtifacts.stream()
                 .map(ArtifactResponse::from)
                 .toList();
     }
@@ -89,24 +90,27 @@ public class ArtifactService {
 
         int nextLevel = playerArtifact.getLevel() + 1;
 
-        ArtifactEnhance enhance = find(artifact.grade(), nextLevel);
+        ArtifactEnhance artifactEnhance = find(artifact.grade(), nextLevel);
 
         int materialCount = playerArtifact.getMaterialCount();
-        int requiredCount = enhance.materialCount();
+        int requiredCount = artifactEnhance.materialCount();
 
         if (materialCount < requiredCount) throw new BusinessException("강화 재료가 부족합니다.");
 
-        // 재화 소비
-        long cost     = enhance.gold();
-        long currency = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
-
+        // 강화
         playerArtifact.changeLevel(nextLevel);
         playerArtifact.changeMaterialCount(materialCount - requiredCount);
         artifactRepository.save(playerArtifact);
 
+        List<ArtifactResponse> artifactResponses = List.of(ArtifactResponse.from(playerArtifact));
+
+        // 재화 소비
+        long               cost               = artifactEnhance.gold();
+        CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
+
         return new ArtifactEnhanceResponse(
-                ArtifactResponse.from(playerArtifact),
-                currency
+                artifactResponses,
+                currenciesResponse
         );
     }
 
@@ -120,8 +124,8 @@ public class ArtifactService {
 
         // 새 아티팩트 장착
         required.changeEquipSlot(slot);
-        artifactRepository.save(required);
         equipped.add(required);
+        artifactRepository.save(required);
 
         return equipped.stream()
                 .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))

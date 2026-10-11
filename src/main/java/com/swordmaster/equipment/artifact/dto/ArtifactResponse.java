@@ -8,12 +8,12 @@ public record ArtifactResponse(
         int     materialCount,
         Integer equipSlot   // null 이면 미장착
 ) {
-    public static ArtifactResponse from(PlayerArtifact artifact) {
+    public static ArtifactResponse from(PlayerArtifact playerArtifact) {
         return new ArtifactResponse(
-                artifact.getCode(),
-                artifact.getLevel(),
-                artifact.getMaterialCount(),
-                artifact.getEquipSlot()
+                playerArtifact.getCode(),
+                playerArtifact.getLevel(),
+                playerArtifact.getMaterialCount(),
+                playerArtifact.getEquipSlot()
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.swordmaster.player.service;
 
 import com.swordmaster.common.BusinessException;
+import com.swordmaster.equipment.sword.dto.SwordResponse;
 import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.repository.PlayerRepository;
@@ -44,5 +45,13 @@ public class PlayerService {
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(HttpStatus.CONFLICT, "플레이어가 이미 존재합니다.");
         }
+    }
+
+    // 변경
+    public SwordResponse changeSwordLevel(Player player, int level) {
+        player.changeSwordLevel(level);
+        playerRepository.save(player);
+
+        return SwordResponse.from(player);
     }
 }

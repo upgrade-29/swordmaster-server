@@ -3,21 +3,26 @@ package com.swordmaster.equipment.sword.service;
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
+import com.swordmaster.equipment.EnhanceResult;
+import com.swordmaster.equipment.sword.dto.SwordEnhanceResponse;
 import com.swordmaster.equipment.sword.dto.SwordRequest;
+import com.swordmaster.equipment.sword.dto.SwordResponse;
 import com.swordmaster.equipment.sword.dto.SwordSellResponse;
 import com.swordmaster.equipment.sword.table.Sword;
 import com.swordmaster.equipment.sword.table.SwordTable;
-import com.swordmaster.equipment.sword.dto.SwordEnhanceResponse;
 import com.swordmaster.idempotency.service.IdempotencyService;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.repository.PlayerRepository;
 import com.swordmaster.player.service.PlayerService;
+import com.swordmaster.reward.Reward;
+import com.swordmaster.reward.RewardType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -26,11 +31,10 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SwordService {
     private final SwordTable         swordTable;
     private final PlayerService      playerService;
-    private final PlayerRepository   playerRepository;
     private final CurrencyService    currencyService;
     private final IdempotencyService idempotencyService;
 
-    // 임시 설정 값 (클라이언트와 일치시키기 위해 외부에서 불러올 필요가 있음)
+    // 임시 설정 값
     private static final int          SCALE         = 10_000;
     private static final CurrencyType CURRENCY_TYPE = CurrencyType.GOLD;
 
@@ -55,17 +59,23 @@ public class SwordService {
 
         if (successRate == null || cost == null) throw new BusinessException("검을 강화할 수 없습니다.");
 
-        int rate = (int)Math.round(successRate * SCALE);
-        int random = ThreadLocalRandom.current().nextInt(SCALE);    // 0 <= random < SCALE
-        int level = (random < rate) ? sword.level() + 1 : swordTable.getFirst().level();
+        int           rate    = (int)Math.round(successRate * SCALE);
+        int           random  = ThreadLocalRandom.current().nextInt(SCALE);    // 0 <= random < SCALE
+        boolean       success = random < rate;
+        EnhanceResult result  = success ? EnhanceResult.SUCCESS : EnhanceResult.DESTROYED;
+        int           level   = success ? sword.level() + 1 : swordTable.getFirst().level();
+
+        // 검 레벨 변경(강화)
+        SwordResponse swordResponse = playerService.changeSwordLevel(player, level);
 
         // 재화 소비
-        long currency = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
+        CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
 
-        player.changeSwordLevel(level);
-        playerRepository.save(player);
-
-        return new SwordEnhanceResponse(expectedLevel == level, level, currency);
+        return new SwordEnhanceResponse(
+                result,
+                swordResponse,
+                currenciesResponse
+        );
     }
 
     // 판매
@@ -88,14 +98,22 @@ public class SwordService {
 
         if (player.getSwordLevel() == level) throw new BusinessException("검을 판매할 수 없습니다");
 
+        // 검 레벨 변경(초기화)
+        SwordResponse swordResponse = playerService.changeSwordLevel(player, level);
+
+        long price = sword.sellPrice();
+
+        // 보상 내역
+        List<Reward> rewardResponses = List.of(new Reward(RewardType.GOLD, null, price));
+
         // 재화 획득
-        long reward   = sword.sellPrice();
-        long currency = currencyService.grant(player, CURRENCY_TYPE, reward, CurrencyReason.EQUIP_SELL);
+        CurrenciesResponse currenciesResponse = currencyService.grant(player, CURRENCY_TYPE, price, CurrencyReason.EQUIP_SELL);
 
-        player.changeSwordLevel(level);
-        playerRepository.save(player);
-
-        return new SwordSellResponse(level, reward, currency);
+        return new SwordSellResponse(
+                swordResponse,
+                rewardResponses,
+                currenciesResponse
+        );
     }
 
     // 공통 (검색)
