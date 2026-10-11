@@ -7,8 +7,6 @@ import com.swordmaster.equipment.artifact.service.ArtifactService;
 import com.swordmaster.equipment.sword.dto.SwordResponse;
 import com.swordmaster.player.dto.PlayerResponse;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.user.dto.UserResponse;
-import com.swordmaster.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,21 +18,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PlayerFacade {
     private final PlayerService   playerService;
-    private final UserService     userService;
     private final CurrencyService currencyService;
     private final ArtifactService artifactService;
 
     // 조회
     @Transactional(readOnly = true)
     public PlayerResponse getMe(Long userId) {
-        UserResponse           userResponse       = userService.getMe(userId);
         Player                 player             = playerService.getMe(userId);
+        String                 nickname           = player.getUser().getNickname();
         SwordResponse          swordResponse      = SwordResponse.from(player);
         CurrenciesResponse     currenciesResponse = currencyService.getAll(player);
         List<ArtifactResponse> artifactResponses  = artifactService.getAll(player);
 
         return PlayerResponse.of(
-                userResponse,
+                userId,
+                nickname,
                 swordResponse,
                 currenciesResponse,
                 artifactResponses);
@@ -43,8 +41,8 @@ public class PlayerFacade {
     // 생성
     @Transactional
     public PlayerResponse create(Long userId) {
-        UserResponse userResponse = userService.getMe(userId);
-        Player       player       = playerService.create(userId);
+        Player player   = playerService.create(userId);
+        String nickname = player.getUser().getNickname();
 
         // 초기 검 생성
         SwordResponse swordResponse = SwordResponse.from(player);
@@ -56,7 +54,8 @@ public class PlayerFacade {
         List<ArtifactResponse> artifactResponses = artifactService.createDefault(player);
 
         return PlayerResponse.of(
-                userResponse,
+                userId,
+                nickname,
                 swordResponse,
                 currenciesResponse,
                 artifactResponses);
