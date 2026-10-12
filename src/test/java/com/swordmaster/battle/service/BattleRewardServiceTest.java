@@ -228,7 +228,7 @@ class BattleRewardServiceTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals(player.getId(), history.getPlayerId());
+        assertEquals(user.getId(), history.getUserId());
         assertEquals(BattleEndReason.VERIFY_FAILED, history.getEndReason());
         assertFalse(history.isVictory());
         assertEquals(100, history.getGold());

@@ -38,10 +38,4 @@ public class Player {
     public void changeSwordLevel(int swordLevel) {
         this.swordLevel = swordLevel;
     }
-
-    // 도전 가능한 스테이지는 1 ~ clearedStage + 1
-    // 갱신은 PlayerRepository.updateClearedStage 사용 (엔티티를 저장하면 동시에 바뀐 swordLevel을 덮어쓸 수 있음)
-    public boolean isStageUnlocked(int stage) {
-        return stage >= 1 && stage <= clearedStage + 1;
-    }
 }

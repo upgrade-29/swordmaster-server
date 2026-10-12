@@ -21,7 +21,6 @@ import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.repository.PlayerRepository;
 import com.swordmaster.player.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +39,6 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 @Transactional
 public class BattleRewardService {
-    private final PlayerRepository              playerRepository;
     private final PlayerService                 playerService;
     private final ArtifactRepository            artifactRepository;
     private final BattleHistoryRepository       battleHistoryRepository;
@@ -59,7 +57,7 @@ public class BattleRewardService {
             Instant         now) {
         Player  player  = playerService.getMe(userId);
         boolean victory = reason == BattleEndReason.CLEARED;
-        int     cleared = player.getClearedStage();
+        int     cleared = playerService.getClearedStage(player);
 
         // 이미 정산한 전투 (정산 후 Redis 세션 삭제에 실패한 경우), 보상 없이 현재 상태만 반환
         if (battleHistoryRepository.existsByBattleId(session.battleId())) {
@@ -74,9 +72,7 @@ public class BattleRewardService {
         List<String>         droppedCodes = List.of();
 
         if (victory) {
-            // 컬럼만 UPDATE하므로 읽어 둔 player에는 반영되지 않음, 응답 값은 직접 계산
-            playerRepository.updateClearedStage(player.getId(), session.stage());
-            cleared = Math.max(cleared, session.stage());
+            cleared = playerService.updateClearedStage(player, session.stage());
 
             Optional<PlayerArtifact> dropped = dropArtifact(player, session.stage());
 
@@ -88,7 +84,7 @@ public class BattleRewardService {
 
         battleHistoryRepository.save(new BattleHistory(
                 session.battleId(),
-                player.getId(),
+                userId,
                 session.stage(),
                 reason,
                 lastSubStageIndex,

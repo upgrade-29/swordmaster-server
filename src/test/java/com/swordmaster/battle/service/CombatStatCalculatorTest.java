@@ -8,8 +8,6 @@ import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.equipment.sword.table.Sword;
 import com.swordmaster.equipment.sword.table.SwordTable;
-import com.swordmaster.player.entity.Player;
-import com.swordmaster.user.entity.User;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -42,7 +40,7 @@ class CombatStatCalculatorTest {
 
     @Test
     void swordOnly() {
-        CombatStat stat = calculator().calculate(new Player(mock(User.class), 3), List.of());
+        CombatStat stat = calculator().calculate(3, List.of());
 
         assertEquals(new CombatStat(245, 1.2, 3200, 0, 0), stat);
     }
@@ -57,7 +55,7 @@ class CombatStatCalculatorTest {
                 artifact("LIFE_01", 5, null)    // 미장착
         );
 
-        CombatStat stat = calculator().calculate(new Player(mock(User.class), 3), artifacts);
+        CombatStat stat = calculator().calculate(3, artifacts);
 
         assertEquals(245,          stat.attack());
         assertEquals(1.2 + 0.25,   stat.attackSpeed());
@@ -71,6 +69,6 @@ class CombatStatCalculatorTest {
         List<ArtifactResponse> artifacts = List.of(artifact("NONE", 0, 0));
 
         assertThrows(IllegalStateException.class,
-                () -> calculator().calculate(new Player(mock(User.class), 3), artifacts));
+                () -> calculator().calculate(3, artifacts));
     }
 }

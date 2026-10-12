@@ -18,10 +18,9 @@ import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.common.table.GameDataVersion;
 import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.common.table.GoogleSheetClient;
-import com.swordmaster.player.entity.Player;
-import com.swordmaster.equipment.artifact.service.ArtifactService;
-import com.swordmaster.player.service.PlayerService;
-import com.swordmaster.user.entity.User;
+import com.swordmaster.equipment.sword.dto.SwordResponse;
+import com.swordmaster.player.dto.PlayerResponse;
+import com.swordmaster.player.service.PlayerFacade;
 import org.junit.jupiter.api.*;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -123,20 +122,19 @@ class BattleServiceTest {
         battleConfig = new BattleConfig(constantTable);
         battleRewardService = mock(BattleRewardService.class);
 
-        PlayerService                 playerService      = mock(PlayerService.class);
-        ArtifactService               artifactService    = mock(ArtifactService.class);
+        PlayerFacade                  playerFacade       = mock(PlayerFacade.class);
         CombatStatCalculator          calculator         = mock(CombatStatCalculator.class);
 
-        when(playerService.getMe(userId)).thenReturn(new Player(mock(User.class), 0));
-        when(artifactService.getAll(any())).thenReturn(List.of());
-        when(calculator.calculate(any(), any())).thenReturn(PLAYER_STAT);
+        when(playerFacade.getMe(userId)).thenReturn(new PlayerResponse(        // 검 레벨 0, 클리어한 스테이지 0
+                userId, "nick", new SwordResponse(0), new CurrenciesResponse(0, 0), List.of(), new StageProgress(0)));
+        when(calculator.calculate(anyInt(), any())).thenReturn(PLAYER_STAT);
         when(battleRewardService.settle(eq(userId), any(), any(), anyInt(), anyLong(), any()))
                 .thenAnswer(invocation -> endResponse(invocation.getArgument(2), invocation.getArgument(4)));
 
         service = new BattleService(
                 new BattleSessionRepository(redis, JsonMapper.builder().build(), Duration.ofMinutes(30), Duration.ofMinutes(10)),
                 new BattleLock(redis, Duration.ofSeconds(5)),
-                battleRewardService, calculator, playerService, artifactService,
+                battleRewardService, calculator, playerFacade,
                 stageTable, enemyTable, battleConfig, new GameDataVersion(constantTable), clock
         );
     }
