@@ -37,7 +37,7 @@ public class ShopService {
     private final IdempotencyService idempotencyService;
 
     @Transactional
-    public ShopPurchaseResponse purchase(Long userId,ShopPurchaseRequest request) {
+    public ShopPurchaseResponse purchase(Long userId, ShopPurchaseRequest request) {
         UUID requestId = request.requestId();
 
         //공용 requestId 기록 모듈이 재결제를 방지하게 됨. (보관 기간은 1일)
@@ -45,18 +45,17 @@ public class ShopService {
                 userId,
                 requestId.toString(),
                 ShopPurchaseResponse.class,
-                ()->doPurchase(userId,requestId,request.productCode())
+                () -> doPurchase(userId, requestId, request.productCode())
         );
     }
 
-    @Transactional
-    public ShopPurchaseResponse doPurchase(Long userId, UUID requestId, String productCode) {
+    private ShopPurchaseResponse doPurchase(Long userId, UUID requestId, String productCode) {
         //1. 플레이어 조회 - userId에 대응하는 player가 존재하는 지 확인하며 재화를 변동할 때 대입할 player를 가져온다.
         Player player = playerService.getMe(userId);
 
         //2. 상품 조회 - 시트의 데이터에서 productCode 에 대응하는 상품과 그 상품목록을 가져옴
         ShopProduct product = shopCatalog.findProduct(productCode)
-                .orElseThrow(()->new BusinessException(HttpStatus.NOT_FOUND,"PRODUCT NOT FOUND"));
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "PRODUCT NOT FOUND"));
 
         List<Reward> rewards = shopCatalog.findRewards(productCode);
 
@@ -65,27 +64,27 @@ public class ShopService {
 
         //현재 플레이어의 재화 확인
         long currentCurrency = switch (priceType) {
-            case GOLD ->  currencyService.getAll(player).gold();
+            case GOLD -> currencyService.getAll(player).gold();
             case DIAMOND -> currencyService.getAll(player).diamond();
         };
 
-        if(currentCurrency < product.price())
-            throw new BusinessException(HttpStatus.CONFLICT,"NOT_ENOUGH_"+priceType.name());
+        if (currentCurrency < product.price())
+            throw new BusinessException(HttpStatus.CONFLICT, "NOT_ENOUGH_" + priceType.name());
 
         //유저의 재화에서 가격만큼 차감을 시도.
-        currencyService.consume(player, priceType,product.price(), CurrencyReason.PURCHASE);
+        currencyService.consume(player, priceType, product.price(), CurrencyReason.PURCHASE);
 
         //재화가 차감되었다면 유저에게 보상을 지급하고 지급이 완료된 보상들을 리스트로 저장
         List<Reward> granted = new ArrayList<>();
 
-        for(Reward reward : rewards){
+        for (Reward reward : rewards) {
             granted.addAll(rewardService.reward(player, reward, CurrencyReason.PURCHASE));
         }
 
         //차감 및 보상 완료
         CurrenciesResponse currencies = currencyService.getAll(player);
 
-        //5.구매를 위한 다른 작업들이 전부 처리되었다면 구매기록을 저장하고 응답을 반환
+        //4.구매를 위한 다른 작업들이 전부 처리되었다면 구매기록을 저장하고 응답을 반환
         ShopPurchaseResponse response = new ShopPurchaseResponse(granted, currencies);
 
         shopPurchaseLogRepository.save(new ShopPurchaseLog(userId, requestId, product, rewards, response));
