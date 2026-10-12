@@ -19,8 +19,9 @@ import com.swordmaster.battle.table.EnemyTable;
 import com.swordmaster.battle.table.Stage;
 import com.swordmaster.battle.table.StageTable;
 import com.swordmaster.common.table.GameDataVersion;
-import com.swordmaster.player.dto.PlayerResponse;
-import com.swordmaster.player.service.PlayerFacade;
+import com.swordmaster.equipment.artifact.service.ArtifactService;
+import com.swordmaster.player.entity.Player;
+import com.swordmaster.player.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.ConcurrencyFailureException;
@@ -46,7 +47,8 @@ public class BattleService {
     private final BattleLock                    battleLock;
     private final BattleRewardService           battleRewardService;
     private final CombatStatCalculator          combatStatCalculator;
-    private final PlayerFacade                  playerFacade;
+    private final PlayerService                 playerService;
+    private final ArtifactService               artifactService;
     private final StageTable                    stageTable;
     private final EnemyTable                    enemyTable;
     private final BattleConfig                  battleConfig;
@@ -80,13 +82,13 @@ public class BattleService {
         return battleLock.execute(userId, () -> {
             if (sessionRepository.find(userId).isPresent()) throw BattleErrorCode.ALREADY_IN_PROGRESS.exception();
 
-            PlayerResponse player = playerFacade.getMe(userId);
+            Player player = playerService.getMe(userId);
 
-            // 이미 깬 스테이지는 다시 도전할 수 있고, 아직 열리지 않은 스테이지는 도전할 수 없음
-            if (stageTable.findByStage(stageNumber).isEmpty() || stageNumber > player.stageProgress().clearedStage() + 1)
+            // 도전 가능한 스테이지는 1 ~ clearedStage + 1 (이미 깬 스테이지는 다시 도전 가능, 1 미만은 테이블 조회에서 걸러짐)
+            if (stageTable.findByStage(stageNumber).isEmpty() || stageNumber > player.getClearedStage() + 1)
                 throw BattleErrorCode.STAGE_LOCKED.exception();
 
-            CombatStat    playerStat = combatStatCalculator.calculate(player.swordResponse().level(), player.artifactResponses());
+            CombatStat    playerStat = combatStatCalculator.calculate(player, artifactService.getAll(player));
             Instant       now        = clock.instant();
             BattleSession session    = BattleSession.start(
                     UUID.randomUUID().toString().replace("-", ""),

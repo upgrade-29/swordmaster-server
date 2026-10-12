@@ -5,6 +5,7 @@ import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.equipment.sword.table.Sword;
 import com.swordmaster.equipment.sword.table.SwordTable;
+import com.swordmaster.player.entity.Player;
 import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
 import org.springframework.stereotype.Component;
 
@@ -29,9 +30,9 @@ public class CombatStatCalculator {
     }
 
     // artifacts는 플레이어의 인벤토리 전체 (장착한 것만 계산)
-    public CombatStat calculate(int swordLevel, List<ArtifactResponse> artifacts) {
-        Sword sword = swordTable.findByLevel(swordLevel)
-                .orElseThrow(() -> new IllegalStateException("검의 정보가 없습니다: level " + swordLevel));
+    public CombatStat calculate(Player player, List<ArtifactResponse> artifacts) {
+        Sword sword = swordTable.findByLevel(player.getSwordLevel())
+                .orElseThrow(() -> new IllegalStateException("검의 정보가 없습니다: level " + player.getSwordLevel()));
 
         double attack      = sword.attackPower();
         double attackSpeed = sword.attackSpeed();

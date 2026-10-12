@@ -57,7 +57,7 @@ public class BattleRewardService {
             Instant         now) {
         Player  player  = playerService.getMe(userId);
         boolean victory = reason == BattleEndReason.CLEARED;
-        int     cleared = playerService.getClearedStage(player);
+        int     cleared = player.getClearedStage();
 
         // 이미 정산한 전투 (정산 후 Redis 세션 삭제에 실패한 경우), 보상 없이 현재 상태만 반환
         if (battleHistoryRepository.existsByBattleId(session.battleId())) {
