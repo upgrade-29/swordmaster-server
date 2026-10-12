@@ -133,7 +133,15 @@ public class BattleRewardService {
 
         Artifact artifact = candidates.get(random.nextInt(candidates.size()));
 
-        // 이미 가진 아티팩트여도 새로 추가 (인벤토리는 같은 아티팩트를 여러 개 가질 수 있음)
+        // 이미 가지고 있는 아티팩트일 경우 material count + 1 (int 범위를 초과하면 예외)
+        Optional<PlayerArtifact> owned = artifactRepository.findByPlayerAndCode(player, artifact.code());
+
+        if (owned.isPresent()) {
+            owned.get().changeMaterialCount(Math.addExact(owned.get().getMaterialCount(), 1));
+
+            return owned;
+        }
+
         return Optional.of(artifactRepository.save(new PlayerArtifact(player, artifact.code())));
     }
 

@@ -18,7 +18,7 @@ import com.swordmaster.common.table.ConfigTable;
 import com.swordmaster.common.table.GameDataVersion;
 import com.swordmaster.common.table.GoogleSheetClient;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.repository.PlayerArtifactRepository;
+import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.player.repository.PlayerRepository;
 import com.swordmaster.user.entity.User;
 import org.junit.jupiter.api.*;
@@ -122,12 +122,12 @@ class BattleServiceTest {
         battleRewardService = mock(BattleRewardService.class);
 
         PlayerRepository              playerRepository   = mock(PlayerRepository.class);
-        PlayerArtifactRepository      artifactRepository = mock(PlayerArtifactRepository.class);
+        ArtifactRepository            artifactRepository = mock(ArtifactRepository.class);
         PlayerStageProgressRepository progressRepository = mock(PlayerStageProgressRepository.class);  // 진행도 없음 (clearedStage 0)
         CombatStatCalculator          calculator         = mock(CombatStatCalculator.class);
 
         when(playerRepository.findByUser_Id(userId)).thenReturn(Optional.of(new Player(mock(User.class), 0)));
-        when(artifactRepository.findAllByPlayer_User_Id(userId)).thenReturn(List.of());
+        when(artifactRepository.findAllByPlayer(any())).thenReturn(List.of());
         when(calculator.calculate(any(), any())).thenReturn(PLAYER_STAT);
         when(battleRewardService.settle(eq(userId), any(), any(), anyInt(), anyLong(), any()))
                 .thenAnswer(invocation -> endResponse(invocation.getArgument(2), invocation.getArgument(4)));

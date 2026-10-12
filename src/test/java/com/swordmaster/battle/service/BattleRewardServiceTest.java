@@ -12,17 +12,19 @@ import com.swordmaster.battle.table.DropRate;
 import com.swordmaster.battle.table.DropRateTable;
 import com.swordmaster.battle.table.Stage;
 import com.swordmaster.battle.table.StageTable;
+import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.entity.CurrencyHistory;
+import com.swordmaster.currency.entity.PlayerCurrency;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.EquipmentStat;
+import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
+import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.entity.PlayerArtifact;
-import com.swordmaster.player.repository.PlayerArtifactRepository;
 import com.swordmaster.player.repository.PlayerRepository;
 import com.swordmaster.user.entity.User;
 import jakarta.persistence.EntityManager;
@@ -54,7 +56,7 @@ class BattleRewardServiceTest {
     @Autowired BattleRewardService           battleRewardService;
     @Autowired CurrencyService               currencyService;
     @Autowired PlayerRepository              playerRepository;
-    @Autowired PlayerArtifactRepository      playerArtifactRepository;
+    @Autowired ArtifactRepository            artifactRepository;
     @Autowired PlayerStageProgressRepository stageProgressRepository;
     @Autowired BattleHistoryRepository       battleHistoryRepository;
     @Autowired EntityManager                 em;
@@ -62,6 +64,7 @@ class BattleRewardServiceTest {
     @MockitoBean StageTable    stageTable;
     @MockitoBean DropRateTable dropRateTable;
     @MockitoBean ArtifactTable artifactTable;
+    @MockitoBean ConstantTable constantTable;     // CurrencyService 의존성
 
     private User   user;
     private Player player;
@@ -73,7 +76,8 @@ class BattleRewardServiceTest {
         user   = new User("battle_" + unique + "@test.com", "password", "b_" + unique);
         em.persist(user);
         player = playerRepository.save(new Player(user, 0));
-        currencyService.createAll(player);
+        // 골드 0, 다이아 0으로 시작 (CurrencyService.createAll은 시작 골드를 지급하므로 직접 생성)
+        for (CurrencyType type : CurrencyType.values()) em.persist(new PlayerCurrency(player, type));
         em.flush();
 
         // 드랍 확률 100%, COMMON 100%, COMMON 아티팩트 하나 -> 승리하면 항상 ART_A 드랍
@@ -114,16 +118,18 @@ class BattleRewardServiceTest {
 
         assertEquals(1, clearedStage());
 
-        List<PlayerArtifact> artifacts = playerArtifactRepository.findAllByPlayer_User_Id(user.getId());
+        List<PlayerArtifact> artifacts = artifactRepository.findAllByPlayer(player);
 
         assertEquals(1, artifacts.size());
         assertEquals("ART_A", artifacts.getFirst().getCode());
         assertEquals(0, artifacts.getFirst().getLevel());
+        assertEquals(0, artifacts.getFirst().getMaterialCount());
         assertNull(artifacts.getFirst().getEquipSlot());
 
         CurrencyHistory history = em.createQuery(
-                        "SELECT h FROM CurrencyHistory h WHERE h.playerId = :id", CurrencyHistory.class)
+                        "SELECT h FROM CurrencyHistory h WHERE h.playerId = :id AND h.reason = :reason", CurrencyHistory.class)
                 .setParameter("id", player.getId())
+                .setParameter("reason", CurrencyReason.REWARD)
                 .getSingleResult();
 
         assertEquals(CurrencyReason.REWARD, history.getReason());
@@ -131,16 +137,21 @@ class BattleRewardServiceTest {
     }
 
     @Test
-    void cleared_sameArtifactAgain_addsNewOne() {
-        BattleEndResponse first  = settle(session(1), BattleEndReason.CLEARED, 0);
+    void cleared_sameArtifactAgain_addsMaterial() {
+        settle(session(1), BattleEndReason.CLEARED, 0);
+
         BattleEndResponse second = settle(session(1), BattleEndReason.CLEARED, 0);
 
-        assertNotEquals(first.changedArtifacts().getFirst().id(), second.changedArtifacts().getFirst().id());
+        assertEquals(List.of("ART_A"), second.rewards().artifactCodes());
+        assertEquals(1, second.changedArtifacts().getFirst().materialCount());
 
         em.flush();
         em.clear();
 
-        assertEquals(2, playerArtifactRepository.findAllByPlayer_User_Id(user.getId()).size());
+        List<PlayerArtifact> artifacts = artifactRepository.findAllByPlayer(player);
+
+        assertEquals(1, artifacts.size());      // 새 행이 생기지 않음
+        assertEquals(1, artifacts.getFirst().getMaterialCount());
     }
 
     @Test
@@ -157,7 +168,7 @@ class BattleRewardServiceTest {
         em.clear();
 
         assertEquals(0, clearedStage());
-        assertTrue(playerArtifactRepository.findAllByPlayer_User_Id(user.getId()).isEmpty());
+        assertTrue(artifactRepository.findAllByPlayer(player).isEmpty());
     }
 
     @Test
@@ -200,7 +211,8 @@ class BattleRewardServiceTest {
 
         assertEquals(1, battleHistoryRepository.findAll().stream()
                 .filter(history -> history.getBattleId().equals(session.battleId())).count());
-        assertEquals(1, playerArtifactRepository.findAllByPlayer_User_Id(user.getId()).size());
+        assertEquals(1, artifactRepository.findAllByPlayer(player).size());
+        assertEquals(0, artifactRepository.findAllByPlayer(player).getFirst().getMaterialCount());   // 재료도 쌓이지 않음
     }
 
     @Test
