@@ -15,11 +15,12 @@ import com.swordmaster.shop.entity.ShopPurchaseLog;
 import com.swordmaster.shop.repository.ShopPurchaseLogRepository;
 import com.swordmaster.shop.table.ShopCatalog;
 import com.swordmaster.shop.table.ShopProduct;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -66,8 +67,10 @@ public class ShopService {
         CurrenciesResponse currenciesResponseDto = currencyService.consume(player, priceType,product.price(), CurrencyReason.PURCHASE);
 
         //재화가 차감되었다면 유저에게 보상을 지급.
+        List<Reward> granted = new ArrayList<>();
+
         for(Reward reward : rewards){
-            rewardService.reward(player,reward,CurrencyReason.PURCHASE);
+            granted.addAll(rewardService.reward(player, reward, CurrencyReason.PURCHASE));
         }
 
 //        //차감 및 보상 완료 후의 재화를 재화 응답 dto 에 담음 -> currencyService.consume()에서 이미 규격에 맞게 응답 반환
@@ -77,7 +80,7 @@ public class ShopService {
 //                left.get(CurrencyType.DIAMOND));
 
         //5.구매를 위한 다른 작업들이 전부 처리되었다면 구매기록을 저장하고 응답을 반환
-        ShopPurchaseResponse response = new ShopPurchaseResponse(rewards, currenciesResponseDto);
+        ShopPurchaseResponse response = new ShopPurchaseResponse(granted, currenciesResponseDto);
 
         shopPurchaseLogRepository.save(new ShopPurchaseLog(userId, request.requestId(), product, rewards, response));
 
