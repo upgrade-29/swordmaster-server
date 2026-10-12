@@ -61,7 +61,7 @@ public class ShopPurchaseLog {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "rewards",nullable = false,columnDefinition = "json")
-    private List<Reward> rewards; //상품의 보상들
+    private List<Reward> rewards; //보상받은 상품 목록
 
     @CreatedDate
     @Column(name = "created_at",nullable = false,columnDefinition = "DATETIME(6)",updatable = false)
