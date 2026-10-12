@@ -51,7 +51,7 @@ public class ArtifactService {
         List<String>         codeList        = constantTable.getTextList(ConstantKey.STARTER_ARTIFACTS);
 
         for (String code : codeList) {
-            if (!artifactTable.existsByCode(code)) throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "아티팩트를 강화할 수 없습니다.");
+            if (!artifactTable.existsByCode(code)) throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "아티팩트를 생성할 수 없습니다.");
 
             playerArtifacts.add(new PlayerArtifact(player, code));
         }
@@ -124,21 +124,32 @@ public class ArtifactService {
         // 슬롯 검사
         if (slot <= 0 || slot > SLOT_COUNT) throw new BusinessException(EquipmentErrorCode.INVALID_SLOT);
 
-        Player               player   = playerService.getMe(userId);
-        List<PlayerArtifact> equipped = doRemove(player, slot);     // 아티팩트 해제
+        Player player = playerService.getMe(userId);
 
         // 아티팩트 소유 검사
-        PlayerArtifact required = find(player, code);
+        PlayerArtifact required  = find(player, code);
+        Integer        equipSlot = required.getEquipSlot();
 
-        // 새 아티팩트 장착
+        // 아티팩트가 이미 장착되어 있는 경우
+        if (equipSlot != null) {
+            // 이미 요청한 슬롯에 장착되어 있으면 변경 없이 반환
+            if (equipSlot == slot) {
+                return toSortedResponses(artifactRepository.findAllByPlayerAndEquipSlotIsNotNull(player));
+            }
+
+            // 장착되어 있는 아티팩트 해제
+            doRemove(player, equipSlot);
+        }
+
+        // 요청할 슬롯에 다른 아티팩트가 장착되어 있으면 해제
+        List<PlayerArtifact> equipped = doRemove(player, slot);
+
+        // 요청한 아티팩트 장착
         required.changeEquipSlot(slot);
         equipped.add(required);
         artifactRepository.save(required);
 
-        return equipped.stream()
-                .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))
-                .map(ArtifactResponse::from)
-                .toList();
+        return toSortedResponses(equipped);
     }
 
     // 해제
@@ -149,10 +160,24 @@ public class ArtifactService {
         Player               player   = playerService.getMe(userId);
         List<PlayerArtifact> equipped = doRemove(player, slot);
 
-        return equipped.stream()
-                .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))
-                .map(ArtifactResponse::from)
-                .toList();
+        return toSortedResponses(equipped);
+    }
+
+    private List<PlayerArtifact> doRemove(Player player, int slot) {
+        List<PlayerArtifact> equipped = artifactRepository.findAllByPlayerAndEquipSlotIsNotNull(player);
+
+        equipped.removeIf(
+                artifact -> {
+                    if (artifact.getEquipSlot() != slot) return false;
+
+                    artifact.changeEquipSlot(null);
+                    artifactRepository.saveAndFlush(artifact);
+
+                    return true;
+                }
+        );
+
+        return equipped;
     }
 
     public PlayerArtifact grantMaterialCount(Player player,String code,long amount){
@@ -172,26 +197,17 @@ public class ArtifactService {
         return playerArtifact;
     }
 
-    private List<PlayerArtifact> doRemove(Player player, int slot) {
-        List<PlayerArtifact> equipped = artifactRepository.findAllByPlayerAndEquipSlotIsNotNull(player);
-
-        equipped.removeIf(
-                artifact -> {
-                    if (artifact.getEquipSlot() != slot) return false;
-
-                    artifact.changeEquipSlot(null);
-                    artifactRepository.save(artifact);
-
-                    return true;
-                }
-        );
-
-        return equipped;
-    }
-
     // 공통 (조회)
     private PlayerArtifact find(Player player, String code) {
         return artifactRepository.findByPlayerAndCode(player, code)
                 .orElseThrow(() -> new BusinessException(EquipmentErrorCode.ARTIFACT_NOT_OWNED));
+    }
+
+    // 공통 (응답 변환)
+    private List<ArtifactResponse> toSortedResponses(List<PlayerArtifact> artifacts) {
+        return artifacts.stream()
+                .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))
+                .map(ArtifactResponse::from)
+                .toList();
     }
 }
