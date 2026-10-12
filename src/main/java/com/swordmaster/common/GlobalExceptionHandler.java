@@ -21,7 +21,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
         log.warn("BusinessException: {}", e.getMessage());
 
-        return getError(e.getStatus(), e.getMessage());
+        return ResponseEntity.status(e.getStatus()).body(new ErrorResponse(e.getMessage(), e.getCode()));
     }
 
     // Valid 검증 실패
