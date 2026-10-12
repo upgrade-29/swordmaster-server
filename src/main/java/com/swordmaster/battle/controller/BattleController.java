@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class BattleController {
-    // 본문이 없는 요청의 게임 데이터 버전 (없으면 버전이 다른 것으로 처리)
+    // 게임 데이터 버전 (session, start, report에서 사용, 없으면 버전이 다른 것으로 처리)
     public static final String GAME_DATA_VERSION_HEADER = "X-Game-Data-Version";
 
     private final BattleService battleService;
@@ -39,13 +39,13 @@ public class BattleController {
         return battleService.start(userId, request.stage(), gameDataVersion);
     }
 
-    // 버전은 본문의 gameDataVersion 사용
     @PostMapping("/battle/report")
     public BattleResultVerifyResponse report(
             @AuthenticationPrincipal Long userId,
+            @RequestHeader(name = GAME_DATA_VERSION_HEADER, required = false) String gameDataVersion,
             @Valid @RequestBody BattleResultVerifyRequest request
     ) {
-        return battleService.report(userId, request);
+        return battleService.report(userId, request, gameDataVersion);
     }
 
     @PostMapping("/battle/abandon")

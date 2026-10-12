@@ -111,7 +111,7 @@ class BattleServiceTest {
                         row("key", "HEAL_RATE",                "value", 0.1, "description", ""),
                         row("key", "NORMAL_BATTLE_TIME_LIMIT", "value", 30L, "description", ""),
                         row("key", "BOSS_BATTLE_TIME_LIMIT",   "value", 60L, "description", ""),
-                        row("key", "GAME_DATA_VERSION",        "value", VERSION, "description", ""))
+                        row("key", "X_GAME_DATA_VERSION",      "value", VERSION, "description", ""))
         ));
 
         ConfigTable configTable = new ConfigTable(sheets, 3L);
@@ -181,7 +181,7 @@ class BattleServiceTest {
         BattleSessionInfo info = start();
 
         assertCode(BattleErrorCode.GAME_DATA_OUTDATED, () -> service.getSession(userId, "old"));
-        assertCode(BattleErrorCode.GAME_DATA_OUTDATED, () -> service.report(userId, withVersion(clientReport(info, 0), "old")));
+        assertCode(BattleErrorCode.GAME_DATA_OUTDATED, () -> service.report(userId, clientReport(info, 0), "old"));
         assertNotNull(service.getSession(userId, VERSION));
     }
 
@@ -211,7 +211,7 @@ class BattleServiceTest {
         assertEquals(expectedHp, response.nextPlayerHp());
 
         // 같은 보고를 다시 보내면 같은 응답
-        assertEquals(response, service.report(userId, first));
+        assertEquals(response, service.report(userId, first, VERSION));
 
         // 재접속하면 이어서 진행
         BattleSessionInfo resumed = service.getSession(userId, VERSION);
@@ -232,7 +232,7 @@ class BattleServiceTest {
 
         // 세션은 삭제, 마지막 보고를 다시 보내면 같은 응답 (다시 정산하지 않음)
         assertNull(service.getSession(userId, VERSION));
-        assertEquals(end, service.report(userId, last));
+        assertEquals(end, service.report(userId, last, VERSION));
         verify(battleRewardService, times(1)).settle(any(), any(), any(), anyInt(), anyLong(), any());
     }
 
@@ -243,7 +243,7 @@ class BattleServiceTest {
 
         clock.advance(Duration.ofMillis(100));      // 실제로는 거의 시간이 흐르지 않음
 
-        assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, request));
+        assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, request, VERSION));
         verify(battleRewardService).settle(eq(userId), any(), eq(BattleEndReason.VERIFY_FAILED), eq(0), eq(0L), any());
         assertNull(service.getSession(userId, VERSION));
     }
@@ -253,13 +253,13 @@ class BattleServiceTest {
         BattleSessionInfo         info    = start();
         BattleResultVerifyRequest correct = clientReport(info, 0);
         BattleResultVerifyRequest wrong   = new BattleResultVerifyRequest(
-                correct.battleId(), VERSION, 0, correct.resultEnum(), correct.playerHp() + 1, correct.enemyHp(),
+                correct.battleId(), 0, correct.resultEnum(), correct.playerHp() + 1, correct.enemyHp(),
                 correct.duration(), correct.playerAttackCount(), correct.enemyAttackCount()
         );
 
         clock.advance(Duration.ofSeconds(60));
 
-        assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, wrong));
+        assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, wrong, VERSION));
         assertNull(service.getSession(userId, VERSION));
     }
 
@@ -271,7 +271,7 @@ class BattleServiceTest {
         clock.advance(Duration.ofSeconds(60));
         service.getSession(userId, VERSION);
 
-        assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, clientReport(info, 0)));
+        assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, clientReport(info, 0), VERSION));
     }
 
     @Test
@@ -279,15 +279,15 @@ class BattleServiceTest {
         BattleSessionInfo         info    = start();
         BattleResultVerifyRequest request = clientReport(info, 0);
         BattleResultVerifyRequest other   = new BattleResultVerifyRequest(
-                "other", VERSION, 0, request.resultEnum(), request.playerHp(), request.enemyHp(),
+                "other", 0, request.resultEnum(), request.playerHp(), request.enemyHp(),
                 request.duration(), request.playerAttackCount(), request.enemyAttackCount()
         );
 
-        assertCode(BattleErrorCode.BATTLE_ID_MISMATCH, () -> service.report(userId, other));
+        assertCode(BattleErrorCode.BATTLE_ID_MISMATCH, () -> service.report(userId, other, VERSION));
 
         service.abandon(userId, info.battleId());
 
-        assertCode(BattleErrorCode.NO_ACTIVE_BATTLE, () -> service.report(userId, request));
+        assertCode(BattleErrorCode.NO_ACTIVE_BATTLE, () -> service.report(userId, request, VERSION));
     }
 
     // ---------- 포기 ----------
@@ -326,7 +326,7 @@ class BattleServiceTest {
     private BattleResultVerifyResponse report(BattleResultVerifyRequest request) {
         clock.advance(Duration.ofMillis((long) (request.duration() * 1000) + 1));
 
-        return service.report(userId, request);
+        return service.report(userId, request, VERSION);
     }
 
     // 클라와 같은 계산으로 만든 보고
@@ -343,14 +343,9 @@ class BattleServiceTest {
         assertEquals(BattleSubStageResultEnum.ENEMY_DEAD, result.resultEnum(), "테스트 스탯은 플레이어가 이기도록 설정");
 
         return new BattleResultVerifyRequest(
-                info.battleId(), VERSION, index, result.resultEnum(), result.playerHp(), result.enemyHp(),
+                info.battleId(), index, result.resultEnum(), result.playerHp(), result.enemyHp(),
                 result.duration(), result.playerAttackCount(), result.enemyAttackCount()
         );
-    }
-
-    private static BattleResultVerifyRequest withVersion(BattleResultVerifyRequest r, String version) {
-        return new BattleResultVerifyRequest(r.battleId(), version, r.subStageIndex(), r.resultEnum(), r.playerHp(),
-                r.enemyHp(), r.duration(), r.playerAttackCount(), r.enemyAttackCount());
     }
 
     private static BattleEndResponse endResponse(BattleEndReason reason, long gold) {

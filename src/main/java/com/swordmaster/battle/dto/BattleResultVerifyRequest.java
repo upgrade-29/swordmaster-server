@@ -10,9 +10,6 @@ public record BattleResultVerifyRequest(
         @NotBlank(message = "battleId가 비어 있습니다.")
         String battleId,
 
-        @NotBlank(message = "gameDataVersion이 비어 있습니다.")
-        String gameDataVersion,
-
         @Min(value = 0, message = "subStageIndex는 0 이상이어야 합니다.")
         int subStageIndex,
 

@@ -116,9 +116,9 @@ public class BattleService {
     }
 
     // 세부 스테이지 결과 보고
-    public BattleResultVerifyResponse report(Long userId, BattleResultVerifyRequest request) {
+    public BattleResultVerifyResponse report(Long userId, BattleResultVerifyRequest request, String clientGameDataVersion) {
         // 데이터가 다르면 검증할 수 없음, 유저 잘못이 아니므로 세션은 끝내지 않음
-        checkGameDataVersion(request.gameDataVersion());
+        checkGameDataVersion(clientGameDataVersion);
 
         return battleLock.execute(userId, () -> {
             Optional<BattleSession> current = sessionRepository.find(userId);

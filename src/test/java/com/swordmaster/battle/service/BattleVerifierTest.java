@@ -16,7 +16,7 @@ class BattleVerifierTest {
 
     private static BattleResultVerifyRequest request(int index, BattleSubStageResultEnum result, double playerHp,
                                                      double enemyHp, double duration, int playerCount, int enemyCount) {
-        return new BattleResultVerifyRequest("b", "v1", index, result, playerHp, enemyHp, duration, playerCount, enemyCount);
+        return new BattleResultVerifyRequest("b", index, result, playerHp, enemyHp, duration, playerCount, enemyCount);
     }
 
     private static BattleResultVerifyRequest valid() {

@@ -131,17 +131,18 @@ class BattleControllerTest {
     @Test
     void report() throws Exception {
         BattleResultVerifyRequest request = new BattleResultVerifyRequest(
-                "abc", VERSION, 0, BattleSubStageResultEnum.ENEMY_DEAD, 80.5, 0, 12.3, 18, 10
+                "abc", 0, BattleSubStageResultEnum.ENEMY_DEAD, 80.5, 0, 12.3, 18, 10
         );
 
-        when(battleService.report(USER_ID, request)).thenReturn(new BattleResultVerifyResponse(
+        when(battleService.report(USER_ID, request, VERSION)).thenReturn(new BattleResultVerifyResponse(
                 0, BattleSubStageResultEnum.ENEMY_DEAD, 1, 90.5, 30, null
         ));
 
         mockMvc.perform(post("/api/battle/report")
+                        .header(BattleController.GAME_DATA_VERSION_HEADER, VERSION)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"battleId":"abc","gameDataVersion":"v1","subStageIndex":0,"resultEnum":"ENEMY_DEAD",
+                                {"battleId":"abc","subStageIndex":0,"resultEnum":"ENEMY_DEAD",
                                  "playerHp":80.5,"enemyHp":0,"duration":12.3,"playerAttackCount":18,"enemyAttackCount":10}
                                 """))
                 .andExpect(status().isOk())
@@ -153,9 +154,10 @@ class BattleControllerTest {
     @Test
     void report_missingBattleId_400() throws Exception {
         mockMvc.perform(post("/api/battle/report")
+                        .header(BattleController.GAME_DATA_VERSION_HEADER, VERSION)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"gameDataVersion":"v1","subStageIndex":0,"resultEnum":"ENEMY_DEAD",
+                                {"subStageIndex":0,"resultEnum":"ENEMY_DEAD",
                                  "playerHp":80.5,"enemyHp":0,"duration":12.3,"playerAttackCount":18,"enemyAttackCount":10}
                                 """))
                 .andExpect(status().isBadRequest())
@@ -166,16 +168,32 @@ class BattleControllerTest {
 
     @Test
     void report_verifyFailed() throws Exception {
-        when(battleService.report(eq(USER_ID), any())).thenThrow(BattleErrorCode.VERIFY_FAILED.exception());
+        when(battleService.report(eq(USER_ID), any(), eq(VERSION))).thenThrow(BattleErrorCode.VERIFY_FAILED.exception());
 
         mockMvc.perform(post("/api/battle/report")
+                        .header(BattleController.GAME_DATA_VERSION_HEADER, VERSION)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"battleId":"abc","gameDataVersion":"v1","subStageIndex":0,"resultEnum":"ENEMY_DEAD",
+                                {"battleId":"abc","subStageIndex":0,"resultEnum":"ENEMY_DEAD",
                                  "playerHp":80.5,"enemyHp":0,"duration":12.3,"playerAttackCount":18,"enemyAttackCount":10}
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VERIFY_FAILED"));
+    }
+
+    // report도 버전은 헤더로만 받음 (헤더가 없으면 null)
+    @Test
+    void report_noHeader_passesNull() throws Exception {
+        when(battleService.report(eq(USER_ID), any(), isNull())).thenThrow(BattleErrorCode.GAME_DATA_OUTDATED.exception());
+
+        mockMvc.perform(post("/api/battle/report")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"battleId":"abc","subStageIndex":0,"resultEnum":"ENEMY_DEAD",
+                                 "playerHp":80.5,"enemyHp":0,"duration":12.3,"playerAttackCount":18,"enemyAttackCount":10}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("GAME_DATA_OUTDATED"));
     }
 
     @Test
