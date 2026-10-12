@@ -23,7 +23,7 @@ import com.swordmaster.battle.table.StageTable;
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.common.table.GameDataVersion;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.repository.PlayerArtifactRepository;
+import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.player.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +52,7 @@ public class BattleService {
     private final BattleRewardService           battleRewardService;
     private final CombatStatCalculator          combatStatCalculator;
     private final PlayerRepository              playerRepository;
-    private final PlayerArtifactRepository      playerArtifactRepository;
+    private final ArtifactRepository            artifactRepository;
     private final PlayerStageProgressRepository stageProgressRepository;
     private final StageTable                    stageTable;
     private final EnemyTable                    enemyTable;
@@ -98,7 +98,7 @@ public class BattleService {
             if (stageTable.findByStage(stageNumber).isEmpty() || !PlayerStageProgress.isUnlocked(clearedStage, stageNumber))
                 throw BattleErrorCode.STAGE_LOCKED.exception();
 
-            CombatStat    playerStat = combatStatCalculator.calculate(player, playerArtifactRepository.findAllByPlayer_User_Id(userId));
+            CombatStat    playerStat = combatStatCalculator.calculate(player, artifactRepository.findAllByPlayer(player));
             Instant       now        = clock.instant();
             BattleSession session    = BattleSession.start(
                     UUID.randomUUID().toString().replace("-", ""),

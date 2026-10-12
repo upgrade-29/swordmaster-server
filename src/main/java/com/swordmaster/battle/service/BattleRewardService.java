@@ -16,14 +16,15 @@ import com.swordmaster.battle.table.StageTable;
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EquipmentGrade;
+import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
+import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
+import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
-import com.swordmaster.player.dto.PlayerArtifactResponse;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.entity.PlayerArtifact;
-import com.swordmaster.player.repository.PlayerArtifactRepository;
 import com.swordmaster.player.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -44,7 +47,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Transactional
 public class BattleRewardService {
     private final PlayerRepository              playerRepository;
-    private final PlayerArtifactRepository      playerArtifactRepository;
+    private final ArtifactRepository            artifactRepository;
     private final PlayerStageProgressRepository stageProgressRepository;
     private final BattleHistoryRepository       battleHistoryRepository;
     private final CurrencyService               currencyService;
@@ -131,7 +134,7 @@ public class BattleRewardService {
         Artifact artifact = candidates.get(random.nextInt(candidates.size()));
 
         // 이미 가진 아티팩트여도 새로 추가 (인벤토리는 같은 아티팩트를 여러 개 가질 수 있음)
-        return Optional.of(playerArtifactRepository.save(new PlayerArtifact(player, artifact.code())));
+        return Optional.of(artifactRepository.save(new PlayerArtifact(player, artifact.code())));
     }
 
     // 누적 확률로 등급 선택 (value: 0 이상 1 미만)
@@ -157,13 +160,20 @@ public class BattleRewardService {
             int                  clearedStage,
             List<PlayerArtifact> changed,
             Instant              now) {
+
+        CurrenciesResponse      currencies = currencyService.getAll(player);
+        Map<CurrencyType, Long> temp       = new EnumMap<>(CurrencyType.class);
+
+        temp.put(CurrencyType.GOLD, currencies.gold());
+        temp.put(CurrencyType.DIAMOND, currencies.diamond());
+
         return new BattleEndResponse(
                 stage,
                 victory,
                 new BattleRewards(gold, droppedCodes),
-                currencyService.getAll(player),
+                temp,
                 new StageProgress(clearedStage),
-                changed.stream().map(PlayerArtifactResponse::from).toList(),
+                changed.stream().map(ArtifactResponse::from).toList(),
                 now
         );
     }

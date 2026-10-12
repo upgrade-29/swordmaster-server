@@ -6,7 +6,7 @@ import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.equipment.sword.table.Sword;
 import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.entity.PlayerArtifact;
+import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;

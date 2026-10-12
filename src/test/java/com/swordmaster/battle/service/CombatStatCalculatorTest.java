@@ -3,12 +3,12 @@ package com.swordmaster.battle.service;
 import com.swordmaster.battle.dto.CombatStat;
 import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.EquipmentStat;
+import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.equipment.sword.table.Sword;
 import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.entity.PlayerArtifact;
 import com.swordmaster.user.entity.User;
 import org.junit.jupiter.api.Test;
 
