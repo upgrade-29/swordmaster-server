@@ -26,9 +26,6 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false, length = 10)
-    private String nickname;
-
     @Enumerated(EnumType.STRING) //db에서 관리자로 변경이 가능, 그래야만 시스템 공지를 사용할 수 있음
     @Column(nullable = false, length = 20)
     private UserRole role = UserRole.USER;
@@ -43,11 +40,16 @@ public class User {
     @Column(nullable = false, updatable = false)
     private Instant  createdAt;
 
-    public User(String email, String password, String nickname) {
+    public User(String email, String password) {
         this.email = email;
         this.password = password;
-        this.nickname = nickname;
     }
+
+//    public User(String email, String password, String nickname) {
+//        this.email = email;
+//        this.password = password;
+//        this.nickname = nickname;
+//    }
 
     public void updateLastLoginAt() {
         this.lastLoginAt = Instant.now();

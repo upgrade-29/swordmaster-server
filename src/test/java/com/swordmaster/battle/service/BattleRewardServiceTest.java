@@ -70,7 +70,7 @@ class BattleRewardServiceTest {
     void setUp() {
         String unique = UUID.randomUUID().toString().substring(0, 8);
 
-        user   = new User("battle_" + unique + "@test.com", "password", "b_" + unique);
+        user   = new User("battle_" + unique + "@test.com", "password");
         em.persist(user);
         player = playerRepository.save(new Player(user, 0));
         currencyService.createAll(player);
