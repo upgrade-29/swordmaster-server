@@ -11,7 +11,7 @@ import com.swordmaster.battle.dto.StageProgress;
 import com.swordmaster.battle.service.BattleService;
 import com.swordmaster.battle.simulation.BattleSubStageResultEnum;
 import com.swordmaster.common.GlobalExceptionHandler;
-import com.swordmaster.currency.CurrencyType;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -199,7 +198,7 @@ class BattleControllerTest {
     @Test
     void abandon() throws Exception {
         when(battleService.abandon(USER_ID, "abc")).thenReturn(new BattleEndResponse(
-                2, false, new BattleRewards(30, List.of()), Map.of(CurrencyType.GOLD, 130L),
+                2, false, new BattleRewards(30, List.of()), new CurrenciesResponse(130, 0),
                 new StageProgress(1), List.of(), NOW
         ));
 
@@ -209,7 +208,7 @@ class BattleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isVictory").value(false))
                 .andExpect(jsonPath("$.rewards.gold").value(30))
-                .andExpect(jsonPath("$.currencies.GOLD").value(130))
+                .andExpect(jsonPath("$.currencies.gold").value(130))
                 .andExpect(jsonPath("$.stageProgress.clearedStage").value(1));
     }
 

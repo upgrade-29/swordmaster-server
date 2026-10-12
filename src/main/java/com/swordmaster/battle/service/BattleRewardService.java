@@ -11,10 +11,8 @@ import com.swordmaster.battle.table.DropRate;
 import com.swordmaster.battle.table.DropRateTable;
 import com.swordmaster.battle.table.Stage;
 import com.swordmaster.battle.table.StageTable;
-import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
-import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
@@ -24,16 +22,14 @@ import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.repository.PlayerRepository;
+import com.swordmaster.player.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -45,6 +41,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Transactional
 public class BattleRewardService {
     private final PlayerRepository              playerRepository;
+    private final PlayerService                 playerService;
     private final ArtifactRepository            artifactRepository;
     private final BattleHistoryRepository       battleHistoryRepository;
     private final CurrencyService               currencyService;
@@ -60,8 +57,7 @@ public class BattleRewardService {
             int             lastSubStageIndex,
             long            gold,
             Instant         now) {
-        Player  player  = playerRepository.findByUser_Id(userId)
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
+        Player  player  = playerService.getMe(userId);
         boolean victory = reason == BattleEndReason.CLEARED;
         int     cleared = player.getClearedStage();
 
@@ -162,18 +158,11 @@ public class BattleRewardService {
             int                  clearedStage,
             List<PlayerArtifact> changed,
             Instant              now) {
-
-        CurrenciesResponse      currencies = currencyService.getAll(player);
-        Map<CurrencyType, Long> temp       = new EnumMap<>(CurrencyType.class);
-
-        temp.put(CurrencyType.GOLD, currencies.gold());
-        temp.put(CurrencyType.DIAMOND, currencies.diamond());
-
         return new BattleEndResponse(
                 stage,
                 victory,
                 new BattleRewards(gold, droppedCodes),
-                temp,
+                currencyService.getAll(player),
                 new StageProgress(clearedStage),
                 changed.stream().map(ArtifactResponse::from).toList(),
                 now

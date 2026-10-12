@@ -3,7 +3,7 @@ package com.swordmaster.battle.service;
 import com.swordmaster.battle.dto.CombatStat;
 import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.EquipmentStat;
-import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
+import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.equipment.sword.table.Sword;
@@ -21,14 +21,8 @@ import static org.mockito.Mockito.*;
 class CombatStatCalculatorTest {
     private static final Sword SWORD = new Sword(3, "검", 0.5, 100L, 0, 245, 1.2, 3200, "SWORD_03");
 
-    private static PlayerArtifact artifact(String code, int level, Integer slot) {
-        PlayerArtifact artifact = mock(PlayerArtifact.class);
-
-        when(artifact.getCode()).thenReturn(code);
-        lenient().when(artifact.getLevel()).thenReturn(level);
-        lenient().when(artifact.getEquipSlot()).thenReturn(slot);
-
-        return artifact;
+    private static ArtifactResponse artifact(String code, int level, Integer slot) {
+        return new ArtifactResponse(code, level, 0, slot);
     }
 
     private static CombatStatCalculator calculator() {
@@ -56,7 +50,7 @@ class CombatStatCalculatorTest {
     // 장착한 아티팩트만 더함, 레벨 0이면 baseValue, 최대 체력은 내림
     @Test
     void withEquippedArtifacts() {
-        List<PlayerArtifact> artifacts = List.of(
+        List<ArtifactResponse> artifacts = List.of(
                 artifact("CRIT_01", 0, 0),      // 0.1
                 artifact("SPD_01",  2, 1),      // 0.15 + 0.05 * 2 = 0.25
                 artifact("HP_01",   1, 2),      // 100.5 + 10 = 110.5
@@ -74,7 +68,7 @@ class CombatStatCalculatorTest {
 
     @Test
     void unknownArtifact_fails() {
-        List<PlayerArtifact> artifacts = List.of(artifact("NONE", 0, 0));
+        List<ArtifactResponse> artifacts = List.of(artifact("NONE", 0, 0));
 
         assertThrows(IllegalStateException.class,
                 () -> calculator().calculate(new Player(mock(User.class), 3), artifacts));

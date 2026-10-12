@@ -6,7 +6,7 @@ import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.equipment.sword.table.Sword;
 import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
+import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -30,7 +30,7 @@ public class CombatStatCalculator {
     }
 
     // artifacts는 플레이어의 인벤토리 전체 (장착한 것만 계산)
-    public CombatStat calculate(Player player, List<PlayerArtifact> artifacts) {
+    public CombatStat calculate(Player player, List<ArtifactResponse> artifacts) {
         Sword sword = swordTable.findByLevel(player.getSwordLevel())
                 .orElseThrow(() -> new IllegalStateException("검의 정보가 없습니다: level " + player.getSwordLevel()));
 
@@ -41,17 +41,17 @@ public class CombatStatCalculator {
         double lifesteal   = 0;
 
         // 슬롯 순서로 더함 (더하는 순서가 바뀌면 double 결과가 미세하게 달라질 수 있음)
-        List<PlayerArtifact> equipped = artifacts.stream()
-                .filter(artifact -> artifact.getEquipSlot() != null)
-                .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))
+        List<ArtifactResponse> equipped = artifacts.stream()
+                .filter(artifact -> artifact.equipSlot() != null)
+                .sorted(Comparator.comparing(ArtifactResponse::equipSlot))
                 .toList();
 
-        for (PlayerArtifact equippedArtifact : equipped) {
-            Artifact artifact = artifactsByCode.get(equippedArtifact.getCode());
+        for (ArtifactResponse equippedArtifact : equipped) {
+            Artifact artifact = artifactsByCode.get(equippedArtifact.code());
 
-            if (artifact == null) throw new IllegalStateException("아티팩트 정보가 없습니다: " + equippedArtifact.getCode());
+            if (artifact == null) throw new IllegalStateException("아티팩트 정보가 없습니다: " + equippedArtifact.code());
 
-            double value = getArtifactValue(artifact, equippedArtifact.getLevel());
+            double value = getArtifactValue(artifact, equippedArtifact.level());
 
             switch (artifact.statType()) {
                 case ATTACK_SPEED -> attackSpeed += value;

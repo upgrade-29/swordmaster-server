@@ -16,10 +16,11 @@ import com.swordmaster.common.BusinessException;
 import com.swordmaster.common.table.constant.ConstantKey;
 import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.common.table.GameDataVersion;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.common.table.GoogleSheetClient;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
-import com.swordmaster.player.repository.PlayerRepository;
+import com.swordmaster.equipment.artifact.service.ArtifactService;
+import com.swordmaster.player.service.PlayerService;
 import com.swordmaster.user.entity.User;
 import org.junit.jupiter.api.*;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
@@ -122,12 +123,12 @@ class BattleServiceTest {
         battleConfig = new BattleConfig(constantTable);
         battleRewardService = mock(BattleRewardService.class);
 
-        PlayerRepository              playerRepository   = mock(PlayerRepository.class);
-        ArtifactRepository            artifactRepository = mock(ArtifactRepository.class);
+        PlayerService                 playerService      = mock(PlayerService.class);
+        ArtifactService               artifactService    = mock(ArtifactService.class);
         CombatStatCalculator          calculator         = mock(CombatStatCalculator.class);
 
-        when(playerRepository.findByUser_Id(userId)).thenReturn(Optional.of(new Player(mock(User.class), 0)));
-        when(artifactRepository.findAllByPlayer(any())).thenReturn(List.of());
+        when(playerService.getMe(userId)).thenReturn(new Player(mock(User.class), 0));
+        when(artifactService.getAll(any())).thenReturn(List.of());
         when(calculator.calculate(any(), any())).thenReturn(PLAYER_STAT);
         when(battleRewardService.settle(eq(userId), any(), any(), anyInt(), anyLong(), any()))
                 .thenAnswer(invocation -> endResponse(invocation.getArgument(2), invocation.getArgument(4)));
@@ -135,7 +136,7 @@ class BattleServiceTest {
         service = new BattleService(
                 new BattleSessionRepository(redis, JsonMapper.builder().build(), Duration.ofMinutes(30), Duration.ofMinutes(10)),
                 new BattleLock(redis, Duration.ofSeconds(5)),
-                battleRewardService, calculator, playerRepository, artifactRepository,
+                battleRewardService, calculator, playerService, artifactService,
                 stageTable, enemyTable, battleConfig, new GameDataVersion(constantTable), clock
         );
     }
@@ -350,7 +351,7 @@ class BattleServiceTest {
 
     private static BattleEndResponse endResponse(BattleEndReason reason, long gold) {
         return new BattleEndResponse(1, reason == BattleEndReason.CLEARED, new BattleRewards(gold, List.of()),
-                Map.of(), new StageProgress(1), List.of(), Instant.EPOCH);
+                new CurrenciesResponse(0, 0), new StageProgress(1), List.of(), Instant.EPOCH);
     }
 
     private static void assertCode(BattleErrorCode code, Executable executable) {

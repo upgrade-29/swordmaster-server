@@ -22,8 +22,10 @@ import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
 import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
+import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.repository.PlayerRepository;
+import com.swordmaster.player.service.PlayerService;
 import com.swordmaster.user.entity.User;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +48,7 @@ import static org.mockito.Mockito.when;
 // 실제 MySQL로 정산 확인 (테스트마다 롤백)
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE) // 내장 DB 대신 실제 MySQL 사용
-@Import({BattleRewardService.class, CurrencyService.class})
+@Import({BattleRewardService.class, CurrencyService.class, PlayerService.class})
 class BattleRewardServiceTest {
     private static final Instant    NOW  = Instant.parse("2026-10-09T00:00:00Z");
     private static final CombatStat STAT = new CombatStat(100, 1, 1000, 0, 0);
@@ -62,6 +64,7 @@ class BattleRewardServiceTest {
     @MockitoBean DropRateTable dropRateTable;
     @MockitoBean ArtifactTable artifactTable;
     @MockitoBean ConstantTable constantTable;     // CurrencyService 의존성
+    @MockitoBean SwordTable    swordTable;        // PlayerService 의존성
 
     private User   user;
     private Player player;
@@ -105,7 +108,7 @@ class BattleRewardServiceTest {
         assertTrue(end.isVictory());
         assertEquals(600, end.rewards().gold());
         assertEquals(List.of("ART_A"), end.rewards().artifactCodes());
-        assertEquals(600L, end.currencies().get(CurrencyType.GOLD));
+        assertEquals(600L, end.currencies().gold());
         assertEquals(1, end.stageProgress().clearedStage());
         assertEquals(1, end.changedArtifacts().size());
         assertEquals(0, end.changedArtifacts().getFirst().level());
@@ -156,7 +159,7 @@ class BattleRewardServiceTest {
         BattleEndResponse end = settle(session(1), BattleEndReason.PLAYER_DEAD, 200);
 
         assertFalse(end.isVictory());
-        assertEquals(200L, end.currencies().get(CurrencyType.GOLD));
+        assertEquals(200L, end.currencies().gold());
         assertEquals(0, end.stageProgress().clearedStage());
         assertTrue(end.rewards().artifactCodes().isEmpty());
         assertTrue(end.changedArtifacts().isEmpty());
@@ -172,7 +175,7 @@ class BattleRewardServiceTest {
     void noGold_noCurrencyChange() {
         BattleEndResponse end = settle(session(1), BattleEndReason.ABANDONED, 0);
 
-        assertEquals(0L, end.currencies().get(CurrencyType.GOLD));
+        assertEquals(0L, end.currencies().gold());
     }
 
     // 낮은 스테이지를 다시 깨도 최고 기록은 그대로
@@ -200,7 +203,7 @@ class BattleRewardServiceTest {
 
         BattleEndResponse again = settle(session, BattleEndReason.CLEARED, 600);
 
-        assertEquals(600L, again.currencies().get(CurrencyType.GOLD));     // 두 번 지급되지 않음
+        assertEquals(600L, again.currencies().gold());     // 두 번 지급되지 않음
         assertTrue(again.changedArtifacts().isEmpty());
 
         em.flush();

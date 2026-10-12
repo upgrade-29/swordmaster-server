@@ -18,15 +18,13 @@ import com.swordmaster.battle.table.Enemy;
 import com.swordmaster.battle.table.EnemyTable;
 import com.swordmaster.battle.table.Stage;
 import com.swordmaster.battle.table.StageTable;
-import com.swordmaster.common.BusinessException;
 import com.swordmaster.common.table.GameDataVersion;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
-import com.swordmaster.player.repository.PlayerRepository;
+import com.swordmaster.equipment.artifact.service.ArtifactService;
+import com.swordmaster.player.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.ConcurrencyFailureException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -49,8 +47,8 @@ public class BattleService {
     private final BattleLock                    battleLock;
     private final BattleRewardService           battleRewardService;
     private final CombatStatCalculator          combatStatCalculator;
-    private final PlayerRepository              playerRepository;
-    private final ArtifactRepository            artifactRepository;
+    private final PlayerService                 playerService;
+    private final ArtifactService               artifactService;
     private final StageTable                    stageTable;
     private final EnemyTable                    enemyTable;
     private final BattleConfig                  battleConfig;
@@ -84,14 +82,13 @@ public class BattleService {
         return battleLock.execute(userId, () -> {
             if (sessionRepository.find(userId).isPresent()) throw BattleErrorCode.ALREADY_IN_PROGRESS.exception();
 
-            Player player = playerRepository.findByUser_Id(userId)
-                    .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
+            Player player = playerService.getMe(userId);
 
             // 이미 깬 스테이지는 다시 도전할 수 있고, 아직 열리지 않은 스테이지는 도전할 수 없음
             if (stageTable.findByStage(stageNumber).isEmpty() || !player.isStageUnlocked(stageNumber))
                 throw BattleErrorCode.STAGE_LOCKED.exception();
 
-            CombatStat    playerStat = combatStatCalculator.calculate(player, artifactRepository.findAllByPlayer(player));
+            CombatStat    playerStat = combatStatCalculator.calculate(player, artifactService.getAll(player));
             Instant       now        = clock.instant();
             BattleSession session    = BattleSession.start(
                     UUID.randomUUID().toString().replace("-", ""),
