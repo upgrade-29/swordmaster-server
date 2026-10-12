@@ -1,7 +1,8 @@
 package com.swordmaster.battle.table;
 
-import com.swordmaster.common.table.ConfigTable;
 import com.swordmaster.common.table.GoogleSheetClient;
+import com.swordmaster.common.table.constant.ConstantKey;
+import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.equipment.EquipmentGrade;
 import org.junit.jupiter.api.Test;
 
@@ -10,11 +11,13 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 // 시트 대신 고정된 행을 돌려주는 GoogleSheetClient로 테이블 변환 / 검증을 확인
 // (GoogleSheetClient는 숫자를 Long / Double, 나머지는 String으로 넘겨주므로 같은 형태로 입력)
 class BattleTableTest {
-    private static final long ENEMY = 1, STAGE = 2, DROP = 3, CONFIG = 4;
+    private static final long ENEMY = 1, STAGE = 2, DROP = 3;
 
     private static GoogleSheetClient sheets(Map<Long, List<Map<String, Object>>> rowsByGid) {
         return new GoogleSheetClient("test") {
@@ -123,37 +126,34 @@ class BattleTableTest {
         assertTrue(e.getMessage().contains("rate의 합이 1이 아닙니다"), e.getMessage());
     }
 
-    @Test
-    void battleConfig_readsValues() {
-        List<Map<String, Object>> rows = List.of(
-                row("key", "CRIT_MULTIPLIER",          "value", 1.5,  "description", "치명타 배율"),
-                row("key", "NORMAL_BATTLE_TIME_LIMIT", "value", 30L,  "description", "일반"),
-                row("key", "BOSS_BATTLE_TIME_LIMIT",   "value", 60L,  "description", "보스"),
-                row("key", "HEAL_RATE",                "value", 0.1,  "description", "회복"),
-                row("key", "STARTER_ARTIFACTS",        "value", "CRIT_01,HP_01", "description", null)
-        );
+    // config 시트 값 (키 존재, 타입 검증은 ConstantTable이 담당)
+    private static ConstantTable constants(double critMultiplier, double healRate) {
+        ConstantTable constantTable = mock(ConstantTable.class);
 
-        ConfigTable  configTable = new ConfigTable(sheets(Map.of(CONFIG, rows)), CONFIG);
-        BattleConfig config      = new BattleConfig(configTable);
+        when(constantTable.getDecimal(ConstantKey.CRIT_MULTIPLIER)).thenReturn(critMultiplier);
+        when(constantTable.getDecimal(ConstantKey.HEAL_RATE)).thenReturn(healRate);
+        when(constantTable.getLong(ConstantKey.NORMAL_BATTLE_TIME_LIMIT)).thenReturn(30L);
+        when(constantTable.getLong(ConstantKey.BOSS_BATTLE_TIME_LIMIT)).thenReturn(60L);
 
-        assertEquals(1.5,  config.getCritMultiplier());
-        assertEquals(0.1,  config.getHealRate());
-        assertEquals(30.0, config.getNormalTimeLimit());    // 정수 칸도 실수로 읽음
-        assertEquals(60.0, config.getBossTimeLimit());
-        assertEquals("CRIT_01,HP_01", configTable.getText("STARTER_ARTIFACTS"));
-        assertEquals(30, configTable.getLong("NORMAL_BATTLE_TIME_LIMIT"));
-        assertThrows(IllegalStateException.class, () -> configTable.getLong("CRIT_MULTIPLIER"));
+        return constantTable;
     }
 
     @Test
-    void battleConfig_missingKey_fails() {
-        List<Map<String, Object>> rows = List.of(
-                row("key", "CRIT_MULTIPLIER", "value", 1.5, "description", "치명타 배율")
-        );
+    void battleConfig_readsValues() {
+        BattleConfig config = new BattleConfig(constants(1.5, 0.1));
 
-        ConfigTable           configTable = new ConfigTable(sheets(Map.of(CONFIG, rows)), CONFIG);
-        IllegalStateException e           = assertThrows(IllegalStateException.class, () -> new BattleConfig(configTable));
+        assertEquals(1.5,  config.getCritMultiplier());
+        assertEquals(0.1,  config.getHealRate());
+        assertEquals(30.0, config.getNormalTimeLimit());
+        assertEquals(60.0, config.getBossTimeLimit());
+    }
 
-        assertTrue(e.getMessage().contains("HEAL_RATE 키가 존재하지 않습니다"), e.getMessage());
+    @Test
+    void battleConfig_invalidValue_fails() {
+        IllegalStateException crit = assertThrows(IllegalStateException.class, () -> new BattleConfig(constants(0.5, 0.1)));
+        IllegalStateException heal = assertThrows(IllegalStateException.class, () -> new BattleConfig(constants(1.5, 1.5)));
+
+        assertTrue(crit.getMessage().contains("CRIT_MULTIPLIER"), crit.getMessage());
+        assertTrue(heal.getMessage().contains("HEAL_RATE"), heal.getMessage());
     }
 }

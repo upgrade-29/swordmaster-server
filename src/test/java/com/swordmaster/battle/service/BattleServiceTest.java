@@ -3,7 +3,6 @@ package com.swordmaster.battle.service;
 import com.swordmaster.battle.BattleEndReason;
 import com.swordmaster.battle.BattleErrorCode;
 import com.swordmaster.battle.dto.*;
-import com.swordmaster.battle.repository.PlayerStageProgressRepository;
 import com.swordmaster.battle.session.BattleLock;
 import com.swordmaster.battle.session.BattleSession;
 import com.swordmaster.battle.session.BattleSessionRepository;
@@ -14,13 +13,14 @@ import com.swordmaster.battle.table.BattleConfig;
 import com.swordmaster.battle.table.EnemyTable;
 import com.swordmaster.battle.table.StageTable;
 import com.swordmaster.common.BusinessException;
-import com.swordmaster.common.table.ConfigTable;
+import com.swordmaster.common.table.constant.ConstantKey;
+import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.common.table.GameDataVersion;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.common.table.GoogleSheetClient;
-import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.repository.PlayerArtifactRepository;
-import com.swordmaster.player.repository.PlayerRepository;
-import com.swordmaster.user.entity.User;
+import com.swordmaster.equipment.sword.dto.SwordResponse;
+import com.swordmaster.player.dto.PlayerResponse;
+import com.swordmaster.player.service.PlayerFacade;
 import org.junit.jupiter.api.*;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -105,38 +105,37 @@ class BattleServiceTest {
                         enemy("BOSS",   "TRUE",  20, 0.8, 2500)),
                 2L, List.of(row("stage", 1L, "enemyCode", "NORMAL", "enemyCount", 1L, "bossCode", "BOSS",
                         "statMultiplier", 1.2, "goldPerEnemy", GOLD_PER_ENEMY, "bossGold", BOSS_GOLD,
-                        "artifactDropRate", 0.5, "recommendedPower", 0L, "imageCode", "IMG")),
-                3L, List.of(
-                        row("key", "CRIT_MULTIPLIER",          "value", 1.5, "description", ""),
-                        row("key", "HEAL_RATE",                "value", 0.1, "description", ""),
-                        row("key", "NORMAL_BATTLE_TIME_LIMIT", "value", 30L, "description", ""),
-                        row("key", "BOSS_BATTLE_TIME_LIMIT",   "value", 60L, "description", ""),
-                        row("key", "X_GAME_DATA_VERSION",      "value", VERSION, "description", ""))
+                        "artifactDropRate", 0.5, "recommendedPower", 0L, "imageCode", "IMG"))
         ));
 
-        ConfigTable configTable = new ConfigTable(sheets, 3L);
+        // config 시트 값 (ConstantTable은 모든 키가 있어야 생성되므로 전투에 쓰는 값만 mock)
+        ConstantTable constantTable = mock(ConstantTable.class);
+
+        when(constantTable.getDecimal(ConstantKey.CRIT_MULTIPLIER)).thenReturn(1.5);
+        when(constantTable.getDecimal(ConstantKey.HEAL_RATE)).thenReturn(0.1);
+        when(constantTable.getLong(ConstantKey.NORMAL_BATTLE_TIME_LIMIT)).thenReturn(30L);
+        when(constantTable.getLong(ConstantKey.BOSS_BATTLE_TIME_LIMIT)).thenReturn(60L);
+        when(constantTable.getText(ConstantKey.X_GAME_DATA_VERSION)).thenReturn(VERSION);
 
         enemyTable   = new EnemyTable(sheets, 1L);
         stageTable   = new StageTable(sheets, enemyTable, 2L);
-        battleConfig = new BattleConfig(configTable);
+        battleConfig = new BattleConfig(constantTable);
         battleRewardService = mock(BattleRewardService.class);
 
-        PlayerRepository              playerRepository   = mock(PlayerRepository.class);
-        PlayerArtifactRepository      artifactRepository = mock(PlayerArtifactRepository.class);
-        PlayerStageProgressRepository progressRepository = mock(PlayerStageProgressRepository.class);  // 진행도 없음 (clearedStage 0)
+        PlayerFacade                  playerFacade       = mock(PlayerFacade.class);
         CombatStatCalculator          calculator         = mock(CombatStatCalculator.class);
 
-        when(playerRepository.findByUser_Id(userId)).thenReturn(Optional.of(new Player(mock(User.class), 0)));
-        when(artifactRepository.findAllByPlayer_User_Id(userId)).thenReturn(List.of());
-        when(calculator.calculate(any(), any())).thenReturn(PLAYER_STAT);
+        when(playerFacade.getMe(userId)).thenReturn(new PlayerResponse(        // 검 레벨 0, 클리어한 스테이지 0
+                userId, "nick", new SwordResponse(0), new CurrenciesResponse(0, 0), List.of(), new StageProgress(0)));
+        when(calculator.calculate(anyInt(), any())).thenReturn(PLAYER_STAT);
         when(battleRewardService.settle(eq(userId), any(), any(), anyInt(), anyLong(), any()))
                 .thenAnswer(invocation -> endResponse(invocation.getArgument(2), invocation.getArgument(4)));
 
         service = new BattleService(
                 new BattleSessionRepository(redis, JsonMapper.builder().build(), Duration.ofMinutes(30), Duration.ofMinutes(10)),
                 new BattleLock(redis, Duration.ofSeconds(5)),
-                battleRewardService, calculator, playerRepository, artifactRepository, progressRepository,
-                stageTable, enemyTable, battleConfig, new GameDataVersion(configTable), clock
+                battleRewardService, calculator, playerFacade,
+                stageTable, enemyTable, battleConfig, new GameDataVersion(constantTable), clock
         );
     }
 
@@ -350,7 +349,7 @@ class BattleServiceTest {
 
     private static BattleEndResponse endResponse(BattleEndReason reason, long gold) {
         return new BattleEndResponse(1, reason == BattleEndReason.CLEARED, new BattleRewards(gold, List.of()),
-                Map.of(), new StageProgress(1), List.of(), Instant.EPOCH);
+                new CurrenciesResponse(0, 0), new StageProgress(1), List.of(), Instant.EPOCH);
     }
 
     private static void assertCode(BattleErrorCode code, Executable executable) {

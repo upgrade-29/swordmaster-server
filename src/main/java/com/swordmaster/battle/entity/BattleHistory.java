@@ -16,7 +16,7 @@ import java.time.Instant;
 @Immutable      // UPDATE 불가
 @Table(
         name              = "battle_histories",
-        indexes           = @Index(name = "idx_battle_histories_player", columnList = "player_id, id"),
+        indexes           = @Index(name = "idx_battle_histories_user", columnList = "user_id, id"),
         uniqueConstraints = @UniqueConstraint(name = "uk_battle_histories_battle_id", columnNames = "battle_id")
 )
 @Getter
@@ -29,8 +29,8 @@ public class BattleHistory {
     @Column(name = "battle_id", nullable = false, length = 32)
     private String battleId;            // Redis 세션의 battleId
 
-    @Column(name = "player_id", nullable = false)
-    private Long playerId;              // 굳이 조인을 하지 않고 ID 값만 참조
+    @Column(name = "user_id", nullable = false)
+    private Long userId;                // 굳이 조인을 하지 않고 ID 값만 참조
 
     @Column(nullable = false)
     private int stage;
@@ -63,7 +63,7 @@ public class BattleHistory {
 
     public BattleHistory(
             String          battleId,
-            Long            playerId,
+            Long            userId,
             int             stage,
             BattleEndReason endReason,
             int             lastSubStageIndex,
@@ -73,7 +73,7 @@ public class BattleHistory {
             Instant         startedAt
     ) {
         this.battleId          = battleId;
-        this.playerId          = playerId;
+        this.userId            = userId;
         this.stage             = stage;
         this.victory           = endReason == BattleEndReason.CLEARED;
         this.endReason         = endReason;
