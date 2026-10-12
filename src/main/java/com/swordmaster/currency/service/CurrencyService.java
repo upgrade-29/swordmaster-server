@@ -39,7 +39,8 @@ public class CurrencyService {
             if (currency.getType() == CurrencyType.GOLD) {
                 long amount = constantTable.getLong(ConstantKey.INITIAL_GOLD);      // 상수 테이블에서 해당 값을 불러옴
 
-                grant(player, type, amount, CurrencyReason.PLAYER_CREATE);          // 증가 후 내역도 같이 저장
+                currency.add(amount);
+                saveAndRecord(currency, amount, CurrencyReason.PLAYER_CREATE, null);
             }
             else currencyRepository.save(currency);
 
@@ -76,8 +77,6 @@ public class CurrencyService {
         boolean                 isExist          = false;
 
         for (PlayerCurrency currency : playerCurrencies) {
-            currencies.put(currency.getType(), currency.getAmount());
-
             // 조회 후 지급
             if (currency.getType() == type) {
                 currency.add(value);
@@ -85,6 +84,8 @@ public class CurrencyService {
 
                 isExist = true;
             }
+
+            currencies.put(currency.getType(), currency.getAmount());
         }
 
         if (!isExist) throw new BusinessException(
