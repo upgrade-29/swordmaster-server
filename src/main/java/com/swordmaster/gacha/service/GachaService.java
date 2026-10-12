@@ -22,7 +22,7 @@ public class GachaService {
     /** 추첨만 하고 지급은 하지 않는다. 지급은 RewardService 담당. */
     public List<Reward> open(String gachaCode, long count) {
         if (count < 1 || count > MAX_OPEN) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_GACHA_COUNT");
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "INVALID_GACHA_COUNT");
         }
         GachaCatalog.Pool pool = gachaCatalog.findPool(gachaCode)
                 .orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,
