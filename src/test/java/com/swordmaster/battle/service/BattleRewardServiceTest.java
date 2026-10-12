@@ -20,9 +20,12 @@ import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.EquipmentStat;
 import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
 import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
+import com.swordmaster.equipment.artifact.service.ArtifactService;
 import com.swordmaster.equipment.artifact.table.Artifact;
+import com.swordmaster.equipment.artifact.table.ArtifactEnhanceTable;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.equipment.sword.table.SwordTable;
+import com.swordmaster.idempotency.service.IdempotencyService;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.repository.PlayerRepository;
 import com.swordmaster.player.service.PlayerService;
@@ -48,7 +51,7 @@ import static org.mockito.Mockito.when;
 // 실제 MySQL로 정산 확인 (테스트마다 롤백)
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE) // 내장 DB 대신 실제 MySQL 사용
-@Import({BattleRewardService.class, CurrencyService.class, PlayerService.class})
+@Import({BattleRewardService.class, CurrencyService.class, PlayerService.class, ArtifactService.class})
 class BattleRewardServiceTest {
     private static final Instant    NOW  = Instant.parse("2026-10-09T00:00:00Z");
     private static final CombatStat STAT = new CombatStat(100, 1, 1000, 0, 0);
@@ -65,6 +68,8 @@ class BattleRewardServiceTest {
     @MockitoBean ArtifactTable artifactTable;
     @MockitoBean ConstantTable constantTable;     // CurrencyService 의존성
     @MockitoBean SwordTable    swordTable;        // PlayerService 의존성
+    @MockitoBean ArtifactEnhanceTable artifactEnhanceTable;   // ArtifactService 의존성
+    @MockitoBean IdempotencyService   idempotencyService;
 
     private User   user;
     private Player player;
@@ -87,6 +92,7 @@ class BattleRewardServiceTest {
                 new DropRate(EquipmentGrade.EPIC, 0),     new DropRate(EquipmentGrade.LEGENDARY, 0)));
         when(artifactTable.getAll()).thenReturn(List.of(
                 new Artifact(EquipmentGrade.COMMON, EquipmentStat.CRIT_RATE, 0.1, 0.01, "A", "ART_A")));
+        when(artifactTable.existsByCode("ART_A")).thenReturn(true);
     }
 
     // ---------- 스키마 (ddl-auto=update는 제약 생성에 실패해도 로그만 남기므로 직접 확인) ----------
@@ -112,6 +118,7 @@ class BattleRewardServiceTest {
         assertEquals(1, end.stageProgress().clearedStage());
         assertEquals(1, end.changedArtifacts().size());
         assertEquals(0, end.changedArtifacts().getFirst().level());
+        assertEquals(1, end.changedArtifacts().getFirst().materialCount());    // 처음 얻어도 재료 1
 
         em.flush();
         em.clear();
@@ -123,7 +130,7 @@ class BattleRewardServiceTest {
         assertEquals(1, artifacts.size());
         assertEquals("ART_A", artifacts.getFirst().getCode());
         assertEquals(0, artifacts.getFirst().getLevel());
-        assertEquals(0, artifacts.getFirst().getMaterialCount());
+        assertEquals(1, artifacts.getFirst().getMaterialCount());
         assertNull(artifacts.getFirst().getEquipSlot());
 
         CurrencyHistory history = em.createQuery(
@@ -143,7 +150,7 @@ class BattleRewardServiceTest {
         BattleEndResponse second = settle(session(1), BattleEndReason.CLEARED, 0);
 
         assertEquals(List.of("ART_A"), second.rewards().artifactCodes());
-        assertEquals(1, second.changedArtifacts().getFirst().materialCount());
+        assertEquals(2, second.changedArtifacts().getFirst().materialCount());
 
         em.flush();
         em.clear();
@@ -151,7 +158,7 @@ class BattleRewardServiceTest {
         List<PlayerArtifact> artifacts = artifactRepository.findAllByPlayer(player);
 
         assertEquals(1, artifacts.size());      // 새 행이 생기지 않음
-        assertEquals(1, artifacts.getFirst().getMaterialCount());
+        assertEquals(2, artifacts.getFirst().getMaterialCount());
     }
 
     @Test
@@ -212,7 +219,7 @@ class BattleRewardServiceTest {
         assertEquals(1, battleHistoryRepository.findAll().stream()
                 .filter(history -> history.getBattleId().equals(session.battleId())).count());
         assertEquals(1, artifactRepository.findAllByPlayer(player).size());
-        assertEquals(0, artifactRepository.findAllByPlayer(player).getFirst().getMaterialCount());   // 재료도 쌓이지 않음
+        assertEquals(1, artifactRepository.findAllByPlayer(player).getFirst().getMaterialCount());   // 재료도 한 번만 쌓임
     }
 
     @Test

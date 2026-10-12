@@ -17,7 +17,7 @@ import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
 import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
-import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
+import com.swordmaster.equipment.artifact.service.ArtifactService;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.player.entity.Player;
@@ -40,7 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Transactional
 public class BattleRewardService {
     private final PlayerService                 playerService;
-    private final ArtifactRepository            artifactRepository;
+    private final ArtifactService               artifactService;
     private final BattleHistoryRepository       battleHistoryRepository;
     private final CurrencyService               currencyService;
     private final StageTable                    stageTable;
@@ -119,16 +119,8 @@ public class BattleRewardService {
 
         Artifact artifact = candidates.get(random.nextInt(candidates.size()));
 
-        // 이미 가지고 있는 아티팩트일 경우 material count + 1 (int 범위를 초과하면 예외)
-        Optional<PlayerArtifact> owned = artifactRepository.findByPlayerAndCode(player, artifact.code());
-
-        if (owned.isPresent()) {
-            owned.get().changeMaterialCount(Math.addExact(owned.get().getMaterialCount(), 1));
-
-            return owned;
-        }
-
-        return Optional.of(artifactRepository.save(new PlayerArtifact(player, artifact.code())));
+        // 재료 1개 지급 (없으면 새로 만들어서 지급하므로 처음 얻어도 materialCount 1)
+        return Optional.of(artifactService.grantMaterialCount(player, artifact.code(), 1));
     }
 
     // 누적 확률로 등급 선택 (value: 0 이상 1 미만)
