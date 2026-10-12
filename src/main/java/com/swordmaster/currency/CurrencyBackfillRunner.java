@@ -1,6 +1,6 @@
 package com.swordmaster.currency;
 
-import com.swordmaster.player.repository.PlayerCurrencyRepository;
+import com.swordmaster.currency.repository.CurrencyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -12,13 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 public class CurrencyBackfillRunner implements ApplicationRunner {
-    private final PlayerCurrencyRepository playerCurrencyRepository;
+    private final CurrencyRepository currencyRepository;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         // 서버 실행 시 새로운 type이 존재하면 커스텀 SQL을 실행하여 INSERT 수행
         for (CurrencyType type : CurrencyType.values())
-            playerCurrencyRepository.insertMissingRows(type.name());
+            currencyRepository.insertMissingRows(type.name());
     }
 }

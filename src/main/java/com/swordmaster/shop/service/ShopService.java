@@ -58,13 +58,13 @@ public class ShopService {
         //4. 구매를 요청한 유저의 재화를 차감하고 보상을 지급
         CurrencyType priceType = product.priceType();
 
-        //해당 유저에게 재화가 충분한지 검사
-        Long currentCurrency = currencyService.getAll(player).get(priceType);
-        if(currentCurrency < product.price())
-            throw new BusinessException(HttpStatus.CONFLICT,"NOT_ENOUGH_"+priceType.name());
+//        //해당 유저에게 재화가 충분한지 검사 -> currencyService.consume()에서 이미 검사
+//        Long currentCurrency = currencyService.getAll(player).get(priceType);
+//        if(currentCurrency < product.price())
+//            throw new BusinessException(HttpStatus.CONFLICT,"NOT_ENOUGH_"+priceType.name());
 
         //유저의 재화에서 가격만큼 차감을 시도.
-        currencyService.consume(player, priceType,product.price(), CurrencyReason.PURCHASE);
+        CurrenciesResponse currenciesResponseDto = currencyService.consume(player, priceType,product.price(), CurrencyReason.PURCHASE);
 
         //재화가 차감되었다면 유저에게 보상을 지급.
         List<Reward> granted = new ArrayList<>();
@@ -73,12 +73,11 @@ public class ShopService {
             granted.addAll(rewardService.reward(player, reward, CurrencyReason.PURCHASE));
         }
 
-        //차감 및 보상 완료 후의 재화를 재화 응답 dto 에 담음
-        Map<CurrencyType,Long> left = currencyService.getAll(player);
-        CurrenciesResponse currenciesResponseDto = new CurrenciesResponse(
-                left.get(CurrencyType.GOLD),
-                left.get(CurrencyType.DIAMOND));
-
+//        //차감 및 보상 완료 후의 재화를 재화 응답 dto 에 담음 -> currencyService.consume()에서 이미 규격에 맞게 응답 반환
+//        Map<CurrencyType,Long> left = currencyService.getAll(player);
+//        CurrenciesResponse currenciesResponseDto = new CurrenciesResponse(
+//                left.get(CurrencyType.GOLD),
+//                left.get(CurrencyType.DIAMOND));
 
         //5.구매를 위한 다른 작업들이 전부 처리되었다면 구매기록을 저장하고 응답을 반환
         ShopPurchaseResponse response = new ShopPurchaseResponse(granted, currenciesResponseDto);

@@ -1,7 +1,7 @@
 package com.swordmaster.currency;
 
 import com.swordmaster.currency.repository.CurrencyHistoryRepository;
-import com.swordmaster.player.entity.PlayerCurrency;
+import com.swordmaster.currency.entity.PlayerCurrency;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

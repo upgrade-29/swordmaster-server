@@ -13,13 +13,13 @@ import java.util.stream.Collectors;
 
 @Component
 public class SwordTable extends SheetTable<Sword> {
-    private final List<Sword> byLevel;
+    private final List<Sword> sortedByLevel;
 
     public SwordTable(GoogleSheetClient sheets, @Value("${game-data.gid.swords}") long gid) {
         super(sheets, gid, Sword.class);    // 변환 후 검증까지 실행
 
         // level의 오름차순 정렬
-        byLevel = rows.stream()
+        sortedByLevel = rows.stream()
                 .sorted(Comparator.comparingInt(Sword::level))
                 .toList();
     }
@@ -79,13 +79,13 @@ public class SwordTable extends SheetTable<Sword> {
 
     // 검색
     @Override
-    public List<Sword> getAll() { return byLevel; }
+    public List<Sword> getAll() { return sortedByLevel; }
 
-    public Sword getFirst() { return byLevel.getFirst(); }
+    public Sword getFirst() { return sortedByLevel.getFirst(); }
 
     public Optional<Sword> findByLevel(int level) {
-        if (level < 0 || level >= byLevel.size()) return Optional.empty();
+        if (level < 0 || level >= sortedByLevel.size()) return Optional.empty();
 
-        return Optional.of(byLevel.get(level));
+        return Optional.of(sortedByLevel.get(level));
     }
 }

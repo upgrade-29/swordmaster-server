@@ -1,5 +1,6 @@
-package com.swordmaster.player.entity;
+package com.swordmaster.equipment.artifact.entity;
 
+import com.swordmaster.player.entity.Player;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -32,13 +33,23 @@ public class PlayerArtifact {
     @Column(nullable = false)
     private int level;
 
+    @Column(nullable = false)
+    private int materialCount;
+
     @Column(name = "equip_slot")
     private Integer equipSlot;      // Null 허용 (null 이면 미장착)
 
     public PlayerArtifact(Player player, String code) {
-        this.player = player;
-        this.code   = code;
-        level       = 0;
-        equipSlot   = null;
+        this.player   = player;
+        this.code     = code;
+        level         = 0;
+        materialCount = 0;
+        equipSlot     = null;
     }
+
+    public void changeLevel(int level) { this.level = level; }
+
+    public void changeMaterialCount(int materialCount) { this.materialCount = materialCount; }
+
+    public void changeEquipSlot(Integer equipSlot) { this.equipSlot = equipSlot; }
 }

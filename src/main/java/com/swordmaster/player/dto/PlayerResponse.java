@@ -1,27 +1,30 @@
 package com.swordmaster.player.dto;
 
-import com.swordmaster.currency.CurrencyType;
-import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.entity.PlayerArtifact;
+import com.swordmaster.currency.dto.CurrenciesResponse;
+import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
+import com.swordmaster.equipment.sword.dto.SwordResponse;
 
 import java.util.List;
-import java.util.Map;
 
 public record PlayerResponse(
-        Long                         playerId,
-        int                          swordLevel,
-        Map<CurrencyType, Long>      currencies,
-        List<PlayerArtifactResponse> artifacts
+        Long                   userId,
+        String                 nickname,
+        SwordResponse          swordResponse,
+        CurrenciesResponse     currenciesResponse,
+        List<ArtifactResponse> artifactResponses
 ) {
     public static PlayerResponse of(
-            Player                  player,
-            Map<CurrencyType, Long> currencies,
-            List<PlayerArtifact>    artifacts) {
+            Long                   userId,
+            String                 nickname,
+            SwordResponse          swordResponse,
+            CurrenciesResponse     currenciesResponse,
+            List<ArtifactResponse> artifactResponses) {
         return new PlayerResponse(
-                player.getId(),
-                player.getSwordLevel(),
-                currencies,
-                artifacts.stream().map(PlayerArtifactResponse::from).toList()
+                userId,
+                nickname,
+                swordResponse,
+                currenciesResponse,
+                artifactResponses
         );
     }
 }
