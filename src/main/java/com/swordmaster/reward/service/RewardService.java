@@ -4,6 +4,7 @@ import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.service.CurrencyService;
+import com.swordmaster.equipment.artifact.service.ArtifactService;
 import com.swordmaster.gacha.service.GachaService;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.reward.Reward;
@@ -19,6 +20,7 @@ import java.util.List;
 public class RewardService {
     private final CurrencyService currencyService;
     private final GachaService gachaService;
+    private final ArtifactService artifactService;
 
     public List<Reward> reward(Player player, Reward reward, CurrencyReason reason) {
         return switch (reward.rewardType()) {
@@ -26,6 +28,12 @@ public class RewardService {
                 goldReward(player, reward.amount(), reason);
                 yield List.of(reward);
             }
+
+            case ARTIFACT -> {
+                artifactReward(player,reward.rewardCode(),reward.amount());
+                yield List.of(reward);
+            }
+
             case GACHA_BOX -> {
                 List<Reward> granted = new ArrayList<>();
                 for (Reward drawn : gachaReward(reward.rewardCode(), reward.amount())) {
@@ -40,6 +48,10 @@ public class RewardService {
 
     private void goldReward(Player player, long amount, CurrencyReason reason) {
         currencyService.grant(player, CurrencyType.GOLD, amount, reason);
+    }
+
+    private void artifactReward(Player player,String code, long amount) {
+        artifactService.grantMaterialCount(player,code, amount);
     }
 
     private List<Reward> gachaReward(String rewardCode, long amount) {

@@ -11,14 +11,14 @@ import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.artifact.dto.ArtifactEnhanceRequest;
 import com.swordmaster.equipment.artifact.dto.ArtifactEnhanceResponse;
 import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
+import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
+import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactEnhance;
 import com.swordmaster.equipment.artifact.table.ArtifactEnhanceTable;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.idempotency.service.IdempotencyService;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
-import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.player.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -144,6 +144,24 @@ public class ArtifactService {
                 .sorted(Comparator.comparing(PlayerArtifact::getEquipSlot))
                 .map(ArtifactResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public PlayerArtifact grantMaterialCount(Player player,String code,long amount){
+        //아티팩트 코드가 테이블에 존재하지 않는지와 수량이 0이거나 0보다 작은 경우 예외 (상태를 500으로 한 이유는 시트 데이터는 관리자가 설정했기에)
+        if (!artifactTable.existsByCode(code))
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,"NOT_EXIST_CODE: " + code);
+        if (amount <= 0)
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR,"AMOUNT_IS_WRONG: " + amount);
+
+        int count = Math.toIntExact(amount);
+
+        PlayerArtifact playerArtifact = artifactRepository.findByPlayerAndCode(player,code)
+                .orElseGet(() -> artifactRepository.save(new PlayerArtifact(player,code)));
+
+        playerArtifact.changeMaterialCount(Math.addExact(playerArtifact.getMaterialCount(), count));
+
+        return playerArtifact;
     }
 
     private List<PlayerArtifact> doRemove(Player player, int slot) {
