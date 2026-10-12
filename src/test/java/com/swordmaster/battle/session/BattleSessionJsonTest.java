@@ -6,13 +6,12 @@ import com.swordmaster.battle.dto.BattleRewards;
 import com.swordmaster.battle.dto.CombatStat;
 import com.swordmaster.battle.dto.StageProgress;
 import com.swordmaster.battle.simulation.BattleSubStageResultEnum;
-import com.swordmaster.currency.CurrencyType;
+import com.swordmaster.currency.dto.CurrenciesResponse;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -60,7 +59,7 @@ class BattleSessionJsonTest {
                 12,
                 true,
                 new BattleRewards(480, List.of("ART_FLAME_RING")),
-                Map.of(CurrencyType.GOLD, 15480L, CurrencyType.DIAMOND, 120L),
+                new CurrenciesResponse(15480, 120),
                 new StageProgress(12),
                 List.of(),
                 NOW
@@ -74,6 +73,6 @@ class BattleSessionJsonTest {
 
         assertEquals(response, restored);
         assertTrue(json.contains("\"isVictory\":true"), json);
-        assertTrue(json.contains("\"GOLD\":15480"), json);
+        assertTrue(json.contains("\"gold\":15480"), json);
     }
 }

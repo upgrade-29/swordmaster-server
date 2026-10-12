@@ -9,7 +9,8 @@ public enum ConstantKey {
     INITIAL_GOLD             (ConstantType.LONG),
     STARTER_ARTIFACTS        (ConstantType.TEXT_LIST),
     NOTICE_SWORD_LEVEL       (ConstantType.INT),
-    NOTICE_DESTROY_LEVEL     (ConstantType.INT);
+    NOTICE_DESTROY_LEVEL     (ConstantType.INT),
+    X_GAME_DATA_VERSION      (ConstantType.TEXT);
 
     private final ConstantType type;
 
