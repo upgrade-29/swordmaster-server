@@ -3,7 +3,6 @@ package com.swordmaster.battle.service;
 import com.swordmaster.battle.BattleEndReason;
 import com.swordmaster.battle.BattleErrorCode;
 import com.swordmaster.battle.dto.*;
-import com.swordmaster.battle.repository.PlayerStageProgressRepository;
 import com.swordmaster.battle.session.BattleLock;
 import com.swordmaster.battle.session.BattleSession;
 import com.swordmaster.battle.session.BattleSessionRepository;
@@ -125,7 +124,6 @@ class BattleServiceTest {
 
         PlayerRepository              playerRepository   = mock(PlayerRepository.class);
         ArtifactRepository            artifactRepository = mock(ArtifactRepository.class);
-        PlayerStageProgressRepository progressRepository = mock(PlayerStageProgressRepository.class);  // 진행도 없음 (clearedStage 0)
         CombatStatCalculator          calculator         = mock(CombatStatCalculator.class);
 
         when(playerRepository.findByUser_Id(userId)).thenReturn(Optional.of(new Player(mock(User.class), 0)));
@@ -137,7 +135,7 @@ class BattleServiceTest {
         service = new BattleService(
                 new BattleSessionRepository(redis, JsonMapper.builder().build(), Duration.ofMinutes(30), Duration.ofMinutes(10)),
                 new BattleLock(redis, Duration.ofSeconds(5)),
-                battleRewardService, calculator, playerRepository, artifactRepository, progressRepository,
+                battleRewardService, calculator, playerRepository, artifactRepository,
                 stageTable, enemyTable, battleConfig, new GameDataVersion(constantTable), clock
         );
     }

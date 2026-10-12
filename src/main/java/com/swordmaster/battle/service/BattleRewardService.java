@@ -5,9 +5,7 @@ import com.swordmaster.battle.dto.BattleEndResponse;
 import com.swordmaster.battle.dto.BattleRewards;
 import com.swordmaster.battle.dto.StageProgress;
 import com.swordmaster.battle.entity.BattleHistory;
-import com.swordmaster.battle.entity.PlayerStageProgress;
 import com.swordmaster.battle.repository.BattleHistoryRepository;
-import com.swordmaster.battle.repository.PlayerStageProgressRepository;
 import com.swordmaster.battle.session.BattleSession;
 import com.swordmaster.battle.table.DropRate;
 import com.swordmaster.battle.table.DropRateTable;
@@ -48,7 +46,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class BattleRewardService {
     private final PlayerRepository              playerRepository;
     private final ArtifactRepository            artifactRepository;
-    private final PlayerStageProgressRepository stageProgressRepository;
     private final BattleHistoryRepository       battleHistoryRepository;
     private final CurrencyService               currencyService;
     private final StageTable                    stageTable;
@@ -63,11 +60,10 @@ public class BattleRewardService {
             int             lastSubStageIndex,
             long            gold,
             Instant         now) {
-        Player                        player   = playerRepository.findByUser_Id(userId)
+        Player  player  = playerRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
-        boolean                       victory  = reason == BattleEndReason.CLEARED;
-        Optional<PlayerStageProgress> progress = stageProgressRepository.findById(player.getId());
-        int                           cleared  = progress.map(PlayerStageProgress::getClearedStage).orElse(0);
+        boolean victory = reason == BattleEndReason.CLEARED;
+        int     cleared = player.getClearedStage();
 
         // 이미 정산한 전투 (정산 후 Redis 세션 삭제에 실패한 경우), 보상 없이 현재 상태만 반환
         if (battleHistoryRepository.existsByBattleId(session.battleId())) {
@@ -82,10 +78,8 @@ public class BattleRewardService {
         List<String>         droppedCodes = List.of();
 
         if (victory) {
-            // 처음 클리어하면 행 생성 (같은 유저의 정산은 BattleLock으로 하나씩 실행)
-            if (progress.isPresent()) progress.get().clear(session.stage());
-            else                      stageProgressRepository.save(new PlayerStageProgress(player.getId(), session.stage()));
-
+            // 컬럼만 UPDATE하므로 읽어 둔 player에는 반영되지 않음, 응답 값은 직접 계산
+            playerRepository.updateClearedStage(player.getId(), session.stage());
             cleared = Math.max(cleared, session.stage());
 
             Optional<PlayerArtifact> dropped = dropArtifact(player, session.stage());

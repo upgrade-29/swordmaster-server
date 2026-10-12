@@ -4,9 +4,7 @@ import com.swordmaster.battle.BattleEndReason;
 import com.swordmaster.battle.dto.BattleEndResponse;
 import com.swordmaster.battle.dto.CombatStat;
 import com.swordmaster.battle.entity.BattleHistory;
-import com.swordmaster.battle.entity.PlayerStageProgress;
 import com.swordmaster.battle.repository.BattleHistoryRepository;
-import com.swordmaster.battle.repository.PlayerStageProgressRepository;
 import com.swordmaster.battle.session.BattleSession;
 import com.swordmaster.battle.table.DropRate;
 import com.swordmaster.battle.table.DropRateTable;
@@ -57,7 +55,6 @@ class BattleRewardServiceTest {
     @Autowired CurrencyService               currencyService;
     @Autowired PlayerRepository              playerRepository;
     @Autowired ArtifactRepository            artifactRepository;
-    @Autowired PlayerStageProgressRepository stageProgressRepository;
     @Autowired BattleHistoryRepository       battleHistoryRepository;
     @Autowired EntityManager                 em;
 
@@ -94,7 +91,7 @@ class BattleRewardServiceTest {
     @Test
     void schema_created() {
         assertEquals(1, count("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() "
-                + "AND table_name = 'player_stage_progresses' AND column_name = 'cleared_stage'"));
+                + "AND table_name = 'players' AND column_name = 'cleared_stage'"));
         assertEquals(1, count("SELECT COUNT(DISTINCT index_name) FROM information_schema.statistics WHERE table_schema = DATABASE() "
                 + "AND table_name = 'battle_histories' AND index_name = 'uk_battle_histories_battle_id'"));
     }
@@ -241,6 +238,7 @@ class BattleRewardServiceTest {
     // ---------- 도우미 ----------
 
     // 실제로는 정산 1회가 트랜잭션 1개이므로, 호출마다 영속성 컨텍스트를 비워 DB에서 새로 읽게 함
+    // (테스트 전체가 트랜잭션 하나라 벌크 UPDATE한 clearedStage가 캐시된 Player에 반영되지 않음)
     private BattleEndResponse settle(BattleSession session, BattleEndReason reason, long gold) {
         em.flush();
         em.clear();
@@ -248,11 +246,27 @@ class BattleRewardServiceTest {
         return battleRewardService.settle(user.getId(), session, reason, 2, gold, NOW);
     }
 
-    // DB에 저장된 진행도 (행이 없으면 0)
+    // DB에 저장된 진행도
     private int clearedStage() {
-        return stageProgressRepository.findById(player.getId())
-                .map(PlayerStageProgress::getClearedStage)
-                .orElse(0);
+        em.clear();
+
+        return playerRepository.findById(player.getId()).orElseThrow().getClearedStage();
+    }
+
+    // 검 강화처럼 Player를 엔티티로 저장해도 전투에서 갱신한 clearedStage를 덮어쓰지 않음 (@DynamicUpdate)
+    @Test
+    void swordLevelChange_keepsClearedStage() {
+        Player stale = playerRepository.findById(player.getId()).orElseThrow();     // 클리어 전에 읽어 둔 Player
+
+        em.detach(stale);
+        settle(session(1), BattleEndReason.CLEARED, 0);
+
+        stale.changeSwordLevel(5);
+        em.merge(stale);
+        em.flush();
+
+        assertEquals(1, clearedStage());
+        assertEquals(5, playerRepository.findById(player.getId()).orElseThrow().getSwordLevel());
     }
 
     private static BattleSession session(int stage) {

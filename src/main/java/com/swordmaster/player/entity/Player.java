@@ -5,8 +5,11 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
+@DynamicUpdate     // 바뀐 컬럼만 UPDATE (검 강화가 전투에서 갱신한 clearedStage를 덮어쓰지 않도록)
 @Table(name = "players")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -22,12 +25,23 @@ public class Player {
     @Column(nullable = false)
     private int swordLevel;
 
+    @ColumnDefault("0")     // 기존 행에 컬럼을 추가할 때의 값
+    @Column(nullable = false)
+    private int clearedStage;       // 지금까지 깬 가장 높은 스테이지 (없으면 0)
+
     public Player(User user, int swordLevel) {
         this.user       = user;
         this.swordLevel = swordLevel;
+        clearedStage    = 0;
     }
 
     public void changeSwordLevel(int swordLevel) {
         this.swordLevel = swordLevel;
+    }
+
+    // 도전 가능한 스테이지는 1 ~ clearedStage + 1
+    // 갱신은 PlayerRepository.updateClearedStage 사용 (엔티티를 저장하면 동시에 바뀐 swordLevel을 덮어쓸 수 있음)
+    public boolean isStageUnlocked(int stage) {
+        return stage >= 1 && stage <= clearedStage + 1;
     }
 }

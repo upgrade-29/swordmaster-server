@@ -7,8 +7,6 @@ import com.swordmaster.battle.dto.BattleResultVerifyRequest;
 import com.swordmaster.battle.dto.BattleResultVerifyResponse;
 import com.swordmaster.battle.dto.BattleSessionInfo;
 import com.swordmaster.battle.dto.CombatStat;
-import com.swordmaster.battle.entity.PlayerStageProgress;
-import com.swordmaster.battle.repository.PlayerStageProgressRepository;
 import com.swordmaster.battle.session.BattleLock;
 import com.swordmaster.battle.session.BattleSession;
 import com.swordmaster.battle.session.BattleSessionRepository;
@@ -53,7 +51,6 @@ public class BattleService {
     private final CombatStatCalculator          combatStatCalculator;
     private final PlayerRepository              playerRepository;
     private final ArtifactRepository            artifactRepository;
-    private final PlayerStageProgressRepository stageProgressRepository;
     private final StageTable                    stageTable;
     private final EnemyTable                    enemyTable;
     private final BattleConfig                  battleConfig;
@@ -91,11 +88,7 @@ public class BattleService {
                     .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
 
             // 이미 깬 스테이지는 다시 도전할 수 있고, 아직 열리지 않은 스테이지는 도전할 수 없음
-            int clearedStage = stageProgressRepository.findById(player.getId())
-                    .map(PlayerStageProgress::getClearedStage)
-                    .orElse(0);
-
-            if (stageTable.findByStage(stageNumber).isEmpty() || !PlayerStageProgress.isUnlocked(clearedStage, stageNumber))
+            if (stageTable.findByStage(stageNumber).isEmpty() || !player.isStageUnlocked(stageNumber))
                 throw BattleErrorCode.STAGE_LOCKED.exception();
 
             CombatStat    playerStat = combatStatCalculator.calculate(player, artifactRepository.findAllByPlayer(player));
