@@ -83,6 +83,8 @@ public class SwordTable extends SheetTable<Sword> {
 
     public Sword getFirst() { return sortedByLevel.getFirst(); }
 
+    public Sword getLast() { return sortedByLevel.getLast(); }
+
     public Optional<Sword> findByLevel(int level) {
         if (level < 0 || level >= sortedByLevel.size()) return Optional.empty();
 
