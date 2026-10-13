@@ -6,6 +6,7 @@ import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
 import com.swordmaster.equipment.artifact.service.ArtifactService;
 import com.swordmaster.equipment.sword.dto.SwordResponse;
+import com.swordmaster.player.dto.PlayerCreateRequest;
 import com.swordmaster.player.dto.PlayerResponse;
 import com.swordmaster.player.entity.Player;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class PlayerFacade {
     @Transactional(readOnly = true)
     public PlayerResponse getMe(Long userId) {
         Player                 player             = playerService.getMe(userId);
-        String                 nickname           = player.getUser().getNickname();
+        String                 nickname           = player.getNickname();
         SwordResponse          swordResponse      = SwordResponse.from(player);
         CurrenciesResponse     currenciesResponse = currencyService.getAll(player);
         List<ArtifactResponse> artifactResponses  = artifactService.getAll(player);
@@ -43,9 +44,9 @@ public class PlayerFacade {
 
     // 생성
     @Transactional
-    public PlayerResponse create(Long userId) {
-        Player player   = playerService.create(userId);
-        String nickname = player.getUser().getNickname();
+    public PlayerResponse create(Long userId, PlayerCreateRequest request) {
+        Player player   = playerService.create(userId, request);
+        String nickname = player.getNickname();
 
         // 초기 검 생성
         SwordResponse swordResponse = SwordResponse.from(player);
