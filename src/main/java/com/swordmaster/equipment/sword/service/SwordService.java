@@ -42,7 +42,7 @@ public class SwordService {
     // 임시 설정 값
     private static final int          SCALE         = 10_000;
     private static final CurrencyType CURRENCY_TYPE = CurrencyType.GOLD;
-    private static final int          NOTICE_LEVEL  = 15;
+    private static final int          NOTICE_LEVEL  = 7;
 
     // 강화
     public SwordEnhanceResponse enhance(Long userId, SwordRequest request) {
