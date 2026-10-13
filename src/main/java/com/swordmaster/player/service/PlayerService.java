@@ -54,4 +54,18 @@ public class PlayerService {
 
         return SwordResponse.from(player);
     }
+
+    // 클리어한 최고 스테이지 조회 (없으면 0)
+    public int getClearedStage(Player player) {
+        return player.getClearedStage();
+    }
+
+    // 클리어한 최고 스테이지 갱신 (기존 기록보다 높을 때만), 갱신 후 최고 스테이지 반환
+    // 컬럼만 UPDATE하므로 인자로 받은 player에는 반영되지 않음
+    @Transactional
+    public int updateClearedStage(Player player, int stage) {
+        playerRepository.updateClearedStage(player.getId(), stage);
+
+        return Math.max(player.getClearedStage(), stage);
+    }
 }

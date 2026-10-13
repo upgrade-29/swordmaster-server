@@ -22,4 +22,11 @@ public class BusinessException extends RuntimeException {
         this.status = status;
         this.code   = code;
     }
+
+    public BusinessException(ErrorCode code) {
+        super(code.getMessage());
+
+        status    = code.getStatus();
+        this.code = code.name();
+    }
 }

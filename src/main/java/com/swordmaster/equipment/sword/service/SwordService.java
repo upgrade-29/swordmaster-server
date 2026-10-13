@@ -6,6 +6,7 @@ import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EnhanceResult;
+import com.swordmaster.equipment.EquipmentErrorCode;
 import com.swordmaster.equipment.sword.dto.SwordEnhanceResponse;
 import com.swordmaster.equipment.sword.dto.SwordRequest;
 import com.swordmaster.equipment.sword.dto.SwordResponse;
@@ -51,13 +52,17 @@ public class SwordService {
     }
 
     private SwordEnhanceResponse doEnhance(Player player, int expectedLevel) {
-        if (player.getSwordLevel() != expectedLevel) throw new BusinessException("검의 DB 정보와 일치하지 않습니다.");
+        // 레벨 검사
+        if (player.getSwordLevel() != expectedLevel) throw new BusinessException(EquipmentErrorCode.LEVEL_MISMATCH);
 
-        Sword  sword       = find(player);
+        // 최대 레벨 검사
+        if (player.getSwordLevel() == swordTable.getLast().level()) throw new BusinessException(EquipmentErrorCode.SWORD_MAX_LEVEL);
+
+        Sword  sword       = findByTable(player);
         Double successRate = sword.successRate();
         Long   cost        = sword.enhanceCost();
 
-        if (successRate == null || cost == null) throw new BusinessException("검을 강화할 수 없습니다.");
+        if (successRate == null || cost == null) throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "검을 강화할 수 없습니다.");
 
         int           rate    = (int)Math.round(successRate * SCALE);
         int           random  = ThreadLocalRandom.current().nextInt(SCALE);    // 0 <= random < SCALE
@@ -68,7 +73,7 @@ public class SwordService {
         // 검 레벨 변경(강화)
         SwordResponse swordResponse = playerService.changeSwordLevel(player, level);
 
-        // 재화 소비
+        // 재화 소비 (+ 재화량 검사)
         CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
 
         return new SwordEnhanceResponse(
@@ -91,12 +96,14 @@ public class SwordService {
     }
 
     private SwordSellResponse doSell(Player player, int expectedLevel) {
-        if (player.getSwordLevel() != expectedLevel) throw new BusinessException("검의 DB 정보와 일치하지 않습니다.");
+        // 레벨 검사
+        if (player.getSwordLevel() != expectedLevel) throw new BusinessException(EquipmentErrorCode.LEVEL_MISMATCH);
 
-        Sword sword = find(player);
+        Sword sword = findByTable(player);
         int   level = swordTable.getFirst().level();
 
-        if (player.getSwordLevel() == level) throw new BusinessException("검을 판매할 수 없습니다");
+        // 판매 레벨 검사
+        if (player.getSwordLevel() == level) throw new BusinessException(EquipmentErrorCode.SWORD_NOT_SELLABLE);
 
         // 검 레벨 변경(초기화)
         SwordResponse swordResponse = playerService.changeSwordLevel(player, level);
@@ -116,9 +123,9 @@ public class SwordService {
         );
     }
 
-    // 공통 (검색)
-    private Sword find(Player player) {
+    // 공통 (조회)
+    private Sword findByTable(Player player) {
         return swordTable.findByLevel(player.getSwordLevel())
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "검의 정보가 없습니다."));
+                .orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "검을 강화할 수 없습니다."));
     }
 }

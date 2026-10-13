@@ -1,5 +1,6 @@
 package com.swordmaster.player.service;
 
+import com.swordmaster.battle.dto.StageProgress;
 import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
@@ -29,13 +30,15 @@ public class PlayerFacade {
         SwordResponse          swordResponse      = SwordResponse.from(player);
         CurrenciesResponse     currenciesResponse = currencyService.getAll(player);
         List<ArtifactResponse> artifactResponses  = artifactService.getAll(player);
+        StageProgress          stageProgress      = new StageProgress(player.getClearedStage());
 
         return PlayerResponse.of(
                 userId,
                 nickname,
                 swordResponse,
                 currenciesResponse,
-                artifactResponses);
+                artifactResponses,
+                stageProgress);
     }
 
     // 생성
@@ -53,11 +56,15 @@ public class PlayerFacade {
         // 초기 아티팩트 생성
         List<ArtifactResponse> artifactResponses = artifactService.createDefault(player);
 
+        // 스테이지 진행도 (새 플레이어는 0)
+        StageProgress stageProgress = new StageProgress(player.getClearedStage());
+
         return PlayerResponse.of(
                 userId,
                 nickname,
                 swordResponse,
                 currenciesResponse,
-                artifactResponses);
+                artifactResponses,
+                stageProgress);
     }
 }

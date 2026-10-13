@@ -5,37 +5,30 @@ import com.swordmaster.battle.dto.BattleEndResponse;
 import com.swordmaster.battle.dto.BattleRewards;
 import com.swordmaster.battle.dto.StageProgress;
 import com.swordmaster.battle.entity.BattleHistory;
-import com.swordmaster.battle.entity.PlayerStageProgress;
 import com.swordmaster.battle.repository.BattleHistoryRepository;
-import com.swordmaster.battle.repository.PlayerStageProgressRepository;
 import com.swordmaster.battle.session.BattleSession;
 import com.swordmaster.battle.table.DropRate;
 import com.swordmaster.battle.table.DropRateTable;
 import com.swordmaster.battle.table.Stage;
 import com.swordmaster.battle.table.StageTable;
-import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
-import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EquipmentGrade;
 import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
 import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
-import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
+import com.swordmaster.equipment.artifact.service.ArtifactService;
 import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.player.entity.Player;
-import com.swordmaster.player.repository.PlayerRepository;
+import com.swordmaster.player.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -46,9 +39,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 @Transactional
 public class BattleRewardService {
-    private final PlayerRepository              playerRepository;
-    private final ArtifactRepository            artifactRepository;
-    private final PlayerStageProgressRepository stageProgressRepository;
+    private final PlayerService                 playerService;
+    private final ArtifactService               artifactService;
     private final BattleHistoryRepository       battleHistoryRepository;
     private final CurrencyService               currencyService;
     private final StageTable                    stageTable;
@@ -63,11 +55,9 @@ public class BattleRewardService {
             int             lastSubStageIndex,
             long            gold,
             Instant         now) {
-        Player                        player   = playerRepository.findByUser_Id(userId)
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
-        boolean                       victory  = reason == BattleEndReason.CLEARED;
-        Optional<PlayerStageProgress> progress = stageProgressRepository.findById(player.getId());
-        int                           cleared  = progress.map(PlayerStageProgress::getClearedStage).orElse(0);
+        Player  player  = playerService.getMe(userId);
+        boolean victory = reason == BattleEndReason.CLEARED;
+        int     cleared = playerService.getClearedStage(player);
 
         // 이미 정산한 전투 (정산 후 Redis 세션 삭제에 실패한 경우), 보상 없이 현재 상태만 반환
         if (battleHistoryRepository.existsByBattleId(session.battleId())) {
@@ -82,11 +72,7 @@ public class BattleRewardService {
         List<String>         droppedCodes = List.of();
 
         if (victory) {
-            // 처음 클리어하면 행 생성 (같은 유저의 정산은 BattleLock으로 하나씩 실행)
-            if (progress.isPresent()) progress.get().clear(session.stage());
-            else                      stageProgressRepository.save(new PlayerStageProgress(player.getId(), session.stage()));
-
-            cleared = Math.max(cleared, session.stage());
+            cleared = playerService.updateClearedStage(player, session.stage());
 
             Optional<PlayerArtifact> dropped = dropArtifact(player, session.stage());
 
@@ -98,7 +84,7 @@ public class BattleRewardService {
 
         battleHistoryRepository.save(new BattleHistory(
                 session.battleId(),
-                player.getId(),
+                userId,
                 session.stage(),
                 reason,
                 lastSubStageIndex,
@@ -133,8 +119,8 @@ public class BattleRewardService {
 
         Artifact artifact = candidates.get(random.nextInt(candidates.size()));
 
-        // 이미 가진 아티팩트여도 새로 추가 (인벤토리는 같은 아티팩트를 여러 개 가질 수 있음)
-        return Optional.of(artifactRepository.save(new PlayerArtifact(player, artifact.code())));
+        // 재료 1개 지급 (없으면 새로 만들어서 지급하므로 처음 얻어도 materialCount 1)
+        return Optional.of(artifactService.grantMaterialCount(player, artifact.code(), 1));
     }
 
     // 누적 확률로 등급 선택 (value: 0 이상 1 미만)
@@ -160,18 +146,11 @@ public class BattleRewardService {
             int                  clearedStage,
             List<PlayerArtifact> changed,
             Instant              now) {
-
-        CurrenciesResponse      currencies = currencyService.getAll(player);
-        Map<CurrencyType, Long> temp       = new EnumMap<>(CurrencyType.class);
-
-        temp.put(CurrencyType.GOLD, currencies.gold());
-        temp.put(CurrencyType.DIAMOND, currencies.diamond());
-
         return new BattleEndResponse(
                 stage,
                 victory,
                 new BattleRewards(gold, droppedCodes),
-                temp,
+                currencyService.getAll(player),
                 new StageProgress(clearedStage),
                 changed.stream().map(ArtifactResponse::from).toList(),
                 now

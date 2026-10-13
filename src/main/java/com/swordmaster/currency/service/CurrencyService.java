@@ -3,6 +3,7 @@ package com.swordmaster.currency.service;
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.common.table.constant.ConstantKey;
 import com.swordmaster.common.table.constant.ConstantTable;
+import com.swordmaster.currency.CurrencyErrorCode;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.dto.CurrenciesResponse;
@@ -39,7 +40,8 @@ public class CurrencyService {
             if (currency.getType() == CurrencyType.GOLD) {
                 long amount = constantTable.getLong(ConstantKey.INITIAL_GOLD);      // 상수 테이블에서 해당 값을 불러옴
 
-                grant(player, type, amount, CurrencyReason.PLAYER_CREATE);          // 증가 후 내역도 같이 저장
+                currency.add(amount);
+                saveAndRecord(currency, amount, CurrencyReason.PLAYER_CREATE, null);
             }
             else currencyRepository.save(currency);
 
@@ -69,15 +71,14 @@ public class CurrencyService {
 
     // 변경 (지급)
     public CurrenciesResponse grant(Player player, CurrencyType type, long value, CurrencyReason reason) {
-        checkPositive(value);   // 양수인지 확인
+        // 양수인지 확인
+        checkPositive(value);
 
         Map<CurrencyType, Long> currencies       = new EnumMap<>(CurrencyType.class);
         List<PlayerCurrency>    playerCurrencies = currencyRepository.findAllByPlayer(player);
         boolean                 isExist          = false;
 
         for (PlayerCurrency currency : playerCurrencies) {
-            currencies.put(currency.getType(), currency.getAmount());
-
             // 조회 후 지급
             if (currency.getType() == type) {
                 currency.add(value);
@@ -85,11 +86,11 @@ public class CurrencyService {
 
                 isExist = true;
             }
+
+            currencies.put(currency.getType(), currency.getAmount());
         }
 
-        if (!isExist) throw new BusinessException(
-                HttpStatus.INTERNAL_SERVER_ERROR, type + "의 데이터가 없습니다."
-        );
+        if (!isExist) throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, type + "을(를) 찾을 수 없습니다.");
 
         return new CurrenciesResponse(
                 currencies.get(CurrencyType.GOLD),
@@ -99,7 +100,8 @@ public class CurrencyService {
 
     // 변경 (차감)
     public CurrenciesResponse consume(Player player, CurrencyType type, long value, CurrencyReason reason) {
-        checkPositive(value);   // 양수인지 확인
+        // 양수인지 확인
+        checkPositive(value);
 
         Map<CurrencyType, Long> currencies       = new EnumMap<>(CurrencyType.class);
         List<PlayerCurrency>    playerCurrencies = currencyRepository.findAllByPlayer(player);
@@ -110,7 +112,14 @@ public class CurrencyService {
 
             // 조회 후 차감
             if (currency.getType() == type) {
-                if (!currency.has(value)) throw new BusinessException(type + "이(가) 부족합니다.");
+                if (!currency.has(value)) {
+                    // 재화의 사용 가능 여부(재화량) 검사
+                    switch (type) {
+                        case GOLD    -> throw new BusinessException(CurrencyErrorCode.NOT_ENOUGH_GOLD);
+                        case DIAMOND -> throw new BusinessException(CurrencyErrorCode.NOT_ENOUGH_DIAMOND);
+                        default      -> throw new BusinessException(type + "이(가) 부족합니다.");
+                    }
+                }
 
                 currency.subtract(value);
                 saveAndRecord(currency, -value, reason, null);      // 음수 값 저장
@@ -119,9 +128,7 @@ public class CurrencyService {
             }
         }
 
-        if (!isExist) throw new BusinessException(
-                HttpStatus.INTERNAL_SERVER_ERROR, type + "의 데이터가 없습니다."
-        );
+        if (!isExist) throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, type + "을(를) 찾을 수 없습니다.");
 
         return new CurrenciesResponse(
                 currencies.get(CurrencyType.GOLD),
@@ -129,36 +136,11 @@ public class CurrencyService {
         );
     }
 
-//    // 변경 (관리자)
-//    public long adjust(Player player, CurrencyType type, long targetAmount, String memo) {
-//        if (targetAmount < 0)               throw new BusinessException("조정할 값이 음수입니다.");
-//        if (memo == null || memo.isBlank()) throw new BusinessException("메모를 입력해주세요.");
-//
-//        PlayerCurrency currency = find(player, type);
-//        long           delta    = targetAmount - currency.getAmount();
-//
-//        if      (delta == 0) return currency.getAmount();    // 변동 없이 종료
-//        else if (delta > 0)  currency.add(delta);
-//        else                 currency.subtract(-delta);
-//
-//        return saveAndRecord(currency, delta, CurrencyReason.ADMIN_ADJUST, memo);
-//    }
-//
-//    // 공통 (조회)
-//    private PlayerCurrency find(Player player, CurrencyType type) {
-//        return currencyRepository.findByPlayerAndType(player, type)
-//                .orElseThrow(() -> new BusinessException(
-//                        HttpStatus.INTERNAL_SERVER_ERROR, type + "의 재화 정보가 없습니다."
-//                ));
-//    }
-
     // 공통 (조회, 유효성 검사)
     // 요구하는 변화량은 마이너스(또는 0)가 될수 없어야 함 (발생하면 서버 내의 코드 에러)
     private void checkPositive(long value) {
         if (value <= 0) {
-            throw new BusinessException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "변동량은 0보다 커야 합니다. 입력값: " + value
-            );
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "변화량(" + value + ")이 0보다 작거나 같습니다.");
         }
     }
 
