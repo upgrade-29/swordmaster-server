@@ -4,6 +4,8 @@ import com.swordmaster.common.BusinessException;
 import com.swordmaster.common.ErrorResponse;
 import com.swordmaster.message.dto.PublicChatRequest;
 import com.swordmaster.message.service.MessageService;
+import com.swordmaster.player.entity.Player;
+import com.swordmaster.player.service.PlayerService;
 import com.swordmaster.user.dto.UserResponse;
 import com.swordmaster.user.service.UserService;
 import jakarta.validation.Valid;
@@ -24,8 +26,9 @@ public class MessageController {
 
     private final MessageService messageService;
     private final UserService userService;
+    private final PlayerService playerService;
 
-    // Client: SEND /app/chat/public
+    // Client: SEND /topic(모든 사용자에게 보이는)/chat/public
     @MessageMapping("/chat/public")
     public void sendPublicChat(
             @Valid @Payload PublicChatRequest request,
@@ -35,6 +38,7 @@ public class MessageController {
 
         // Client가 보낸 발신자 정보를 사용하지 않는다.
         UserResponse user = userService.getMe(userId);
+        Player player = playerService.getMe(user.id());
 
         String content = request.content().strip();
 
@@ -50,7 +54,37 @@ public class MessageController {
 
         messageService.deliverPublicMessage(
                 user.id(),
-                user.nickname(),
+                player.getId().toString(),
+                content
+        );
+    }
+
+    // Client: SEND /user(개인에게만 보이는)/queue/system
+    @MessageMapping("/queue/system")
+    public void sendPrivateSystemChat(
+            @Valid @Payload PublicChatRequest request,
+            Principal principal,
+            String content) {
+
+        Long userId = Long.valueOf(principal.getName());
+
+        // Client가 보낸 발신자 정보를 사용하지 않는다.
+        UserResponse user = userService.getMe(userId);
+        Player player = playerService.getMe(user.id());
+
+        if (content.isBlank()) {
+            throw new BusinessException("채팅 내용을 입력해주세요.");
+        }
+
+        if (content.codePoints().anyMatch(Character::isISOControl)) {
+            throw new BusinessException(
+                    "줄바꿈과 제어문자는 사용할 수 없습니다."
+            );
+        }
+
+        messageService.deliverPublicMessage(
+                user.id(),
+                player.getId().toString(),//굳이?
                 content
         );
     }

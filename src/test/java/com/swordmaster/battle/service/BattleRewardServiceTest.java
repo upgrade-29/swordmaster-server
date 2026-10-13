@@ -78,7 +78,7 @@ class BattleRewardServiceTest {
     void setUp() {
         String unique = UUID.randomUUID().toString().substring(0, 8);
 
-        user   = new User("battle_" + unique + "@test.com", "password", "b_" + unique);
+        user   = new User("battle_" + unique + "@test.com", "password");
         em.persist(user);
         player = playerRepository.save(new Player(user, 0));
         // 골드 0, 다이아 0으로 시작 (CurrencyService.createAll은 시작 골드를 지급하므로 직접 생성)
