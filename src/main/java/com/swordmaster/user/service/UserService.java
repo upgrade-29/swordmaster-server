@@ -34,8 +34,7 @@ public class UserService {
 
         User user = new User(
                 request.getEmail(),
-                encodedPassword,
-                request.getNickname()
+                encodedPassword
         );
 
         userRepository.save(user);
@@ -64,8 +63,7 @@ public class UserService {
 
         return new UserResponse(
                 user.getId(),
-                user.getEmail(),
-                user.getNickname()
+                user.getEmail()
         );
     }
 }
