@@ -28,6 +28,9 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-websocket'//for ws
 
+    implementation 'org.springframework.boot:spring-boot-starter-flyway' //flyway
+    implementation 'org.flywaydb:flyway-mysql'
+
     // Source: https://mvnrepository.com/artifact/io.awspring.cloud/spring-cloud-aws-starter-parameter-store
     // aws에 올리는 경우만 사용, local에서 사용 시 주석처리
     //implementation("io.awspring.cloud:spring-cloud-aws-starter-parameter-store:4.1.0")
