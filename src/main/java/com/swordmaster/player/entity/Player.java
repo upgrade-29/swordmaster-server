@@ -10,7 +10,13 @@ import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
 @DynamicUpdate     // 바뀐 컬럼만 UPDATE (검 강화가 전투에서 갱신한 clearedStage를 덮어쓰지 않도록)
-@Table(name = "players")
+@Table(
+        name              = "players",
+        uniqueConstraints = @UniqueConstraint(
+                name        = "uk_players_nickname",
+                columnNames = "nickname"
+        )
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Player {
@@ -22,6 +28,9 @@ public class Player {
     @JoinColumn(name = "user_id", nullable = false, unique = true)  // Not Null, 유저당 하나만
     private User user;
 
+    @Column(nullable = false, length = 10)
+    private String nickname;
+
     @Column(nullable = false)
     private int swordLevel;
 
@@ -29,8 +38,9 @@ public class Player {
     @Column(nullable = false)
     private int clearedStage;       // 지금까지 깬 가장 높은 스테이지 (없으면 0)
 
-    public Player(User user, int swordLevel) {
+    public Player(User user, String nickname, int swordLevel) {
         this.user       = user;
+        this.nickname   = nickname;
         this.swordLevel = swordLevel;
         clearedStage    = 0;
     }

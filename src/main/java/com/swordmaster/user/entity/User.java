@@ -45,12 +45,6 @@ public class User {
         this.password = password;
     }
 
-//    public User(String email, String password, String nickname) {
-//        this.email = email;
-//        this.password = password;
-//        this.nickname = nickname;
-//    }
-
     public void updateLastLoginAt() {
         this.lastLoginAt = Instant.now();
     }
