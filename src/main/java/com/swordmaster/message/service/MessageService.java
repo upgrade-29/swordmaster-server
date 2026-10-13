@@ -14,7 +14,7 @@ import java.time.Instant;
 public class MessageService {
     private final SimpMessagingTemplate messagingTemplate;
 
-    // 특정 사용자의 구독 중인 연결들에 시스템 알림을 보낸다.
+    // 특정 사용자의 구독 중인 연결들에 시스템 알림을 보낸다. 개인 메세지의 경우 id가 필요가 없지만 이후에 기록(저장)을 위해서 남겨둠
     public void sendPrivateSystemNotice(Long userId, String content) {
         MessageResponse message = new MessageResponse(
                 MessageType.SYSTEM_NOTICE,
