@@ -1,0 +1,5 @@
+.git
+.gradle
+.idea
+src/main/resources/application-prod.properties
+.env
