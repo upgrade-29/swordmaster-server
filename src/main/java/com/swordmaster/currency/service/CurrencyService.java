@@ -40,22 +40,22 @@ public class CurrencyService {
             if (currency.getType() == CurrencyType.GOLD) {
                 long amount = constantTable.getLong(ConstantKey.INITIAL_GOLD);      // 상수 테이블에서 해당 값을 불러옴
 
-                currency.add(amount);
-                saveAndRecord(currency, amount, CurrencyReason.PLAYER_CREATE, null);
+                if (amount > 0) {
+                    currency.add(amount);
+                    saveAndRecord(currency, amount, CurrencyReason.PLAYER_CREATE, null);
+                }
+                else currencyRepository.save(currency);
             }
             else currencyRepository.save(currency);
 
             currencies.put(currency.getType(), currency.getAmount());
         }
 
-        return new CurrenciesResponse(
-                currencies.get(CurrencyType.GOLD),
-                currencies.get(CurrencyType.DIAMOND)
-        );
+        return toResponse(currencies);
     }
 
-    @Transactional(readOnly = true)
     // 조회 (전체)
+    @Transactional(readOnly = true)
     public CurrenciesResponse getAll(Player player) {
         Map<CurrencyType, Long> currencies       = new EnumMap<>(CurrencyType.class);
         List<PlayerCurrency>    playerCurrencies = currencyRepository.findAllByPlayer(player);
@@ -63,10 +63,7 @@ public class CurrencyService {
         for (PlayerCurrency currency : playerCurrencies)
             currencies.put(currency.getType(), currency.getAmount());
 
-        return new CurrenciesResponse(
-                currencies.get(CurrencyType.GOLD),
-                currencies.get(CurrencyType.DIAMOND)
-        );
+        return toResponse(currencies);
     }
 
     // 변경 (지급)
@@ -92,10 +89,7 @@ public class CurrencyService {
 
         if (!isExist) throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, type + "을(를) 찾을 수 없습니다.");
 
-        return new CurrenciesResponse(
-                currencies.get(CurrencyType.GOLD),
-                currencies.get(CurrencyType.DIAMOND)
-        );
+        return toResponse(currencies);
     }
 
     // 변경 (차감)
@@ -108,8 +102,6 @@ public class CurrencyService {
         boolean                 isExist          = false;
 
         for (PlayerCurrency currency : playerCurrencies) {
-            currencies.put(currency.getType(), currency.getAmount());
-
             // 조회 후 차감
             if (currency.getType() == type) {
                 if (!currency.has(value)) {
@@ -126,14 +118,13 @@ public class CurrencyService {
 
                 isExist = true;
             }
+
+            currencies.put(currency.getType(), currency.getAmount());
         }
 
         if (!isExist) throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, type + "을(를) 찾을 수 없습니다.");
 
-        return new CurrenciesResponse(
-                currencies.get(CurrencyType.GOLD),
-                currencies.get(CurrencyType.DIAMOND)
-        );
+        return toResponse(currencies);
     }
 
     // 공통 (조회, 유효성 검사)
@@ -157,6 +148,14 @@ public class CurrencyService {
                         reason,
                         memo
                 )
+        );
+    }
+
+    // 공통 (응답 변환)
+    private CurrenciesResponse toResponse(Map<CurrencyType, Long> currencies) {
+        return new CurrenciesResponse(
+                currencies.getOrDefault(CurrencyType.GOLD,    0L),
+                currencies.getOrDefault(CurrencyType.DIAMOND, 0L)
         );
     }
 }

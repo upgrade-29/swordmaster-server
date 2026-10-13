@@ -71,9 +71,8 @@ public class SwordTable extends SheetTable<Sword> {
             if (sword.maxHp()       < 0) errors.add(at + "maxHp는 0 이상이어야 합니다.");
 
             // appearanceCode는 Not Blank
-            // name은 Not Blank
             if (sword.appearanceCode() == null || sword.appearanceCode().isBlank())
-                errors.add(at + "name이 비어 있습니다.");
+                errors.add(at + "appearanceCode가 비어 있습니다.");
         }
     }
 
