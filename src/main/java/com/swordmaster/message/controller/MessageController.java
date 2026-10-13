@@ -59,7 +59,7 @@ public class MessageController {
         );
     }
 
-    // Client: SEND /user(개인에게만 보이는)/queue/system
+    // Client: SEND /user(개인에게만 보이는)/queue/system +다른 서비스에서 서비스로 사용을 한다면 이 기능이 필요한가?
     @MessageMapping("/queue/system")
     public void sendPrivateSystemChat(
             @Valid @Payload PublicChatRequest request,
@@ -82,11 +82,7 @@ public class MessageController {
             );
         }
 
-        messageService.deliverPublicMessage(
-                user.id(),
-                player.getId().toString(),//굳이?
-                content
-        );
+        messageService.sendPrivateSystemNotice(userId, content);
     }
 
     // 오류는 송신한 연결에만 전달한다.
