@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 // playerId + equipSlot 조합은 유일해야 함 (같은 슬롯에 중복으로 저장할 수 없음)
@@ -38,6 +39,10 @@ public class PlayerArtifact {
 
     @Column(name = "equip_slot")
     private Integer equipSlot;      // Null 허용 (null 이면 미장착)
+
+    @Version                // 낙관적 락 (보상 지급과 강화 등이 동시에 같은 행을 바꾸면 나중 요청이 실패)
+    @Column(nullable = false)
+    private long version;
 
     public PlayerArtifact(Player player, String code) {
         this.player   = player;
