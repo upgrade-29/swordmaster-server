@@ -17,10 +17,6 @@ import java.time.Instant;
         uniqueConstraints = @UniqueConstraint(
                 name        = "uk_player_rankings_player_type",
                 columnNames = {"player_id", "type"}
-        ),
-        indexes = @Index(
-                name       = "idx_player_rankings_rank",
-                columnList = "type, score DESC, achieved_at ASC, id ASC"    // 동점 규칙 정렬 순서
         )
 )
 @Getter
