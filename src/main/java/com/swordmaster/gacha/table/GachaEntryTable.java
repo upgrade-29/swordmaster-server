@@ -53,7 +53,7 @@ public class GachaEntryTable extends SheetTable<GachaEntry> {
             }
 
             // 상자 안에 상자 금지 (RewardService 재귀 호출이 끝나지 않는 것을 방지)
-            if (entry.rewardType() == RewardType.GACHA)
+            if (entry.rewardType() == RewardType.GACHA_BOX)
                 errors.add(at + "가챠 결과에 GACHA_BOX는 넣을 수 없습니다.");
 
             // 수량, 가중치는 0보다 커야 함
