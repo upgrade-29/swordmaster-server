@@ -1,5 +1,11 @@
 package com.swordmaster.ranking.service;
 
+import com.swordmaster.battle.dto.CombatStat;
+import com.swordmaster.battle.service.CombatStatCalculator;
+import com.swordmaster.common.table.constant.ConstantKey;
+import com.swordmaster.common.table.constant.ConstantTable;
+import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
+import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.service.PlayerService;
 import com.swordmaster.ranking.RankingType;
@@ -27,6 +33,11 @@ public class RankingService {
     private final PlayerService             playerService;
     private final ApplicationEventPublisher eventPublisher;
 
+    // 전투력 계산용
+    private final ArtifactRepository   artifactRepository;
+    private final CombatStatCalculator combatStatCalculator;
+    private final ConstantTable        constantTable;
+
     private static final int RANKING_LIMIT = 100;
 
     // 조회
@@ -39,7 +50,7 @@ public class RankingService {
         long total = Math.max(rankingRedisStore.count(type), me.rank());
 
         return new RankingResponse(
-                getTop(type, RANKING_LIMIT),            // 상위 N명 (집계본 기준)
+                getTop(type),                           // 상위 N명 (집계본 기준)
                 me,                                     // 내 랭킹 (실시간 기준)
                 total,                                  // 총 인원 수 (클라이언트에서 내 랭킹(순위)의 백분율 계산용)
                 rankingRedisStore.findUpdatedAt(type)   // 상위 목록 집계 시각
@@ -47,8 +58,8 @@ public class RankingService {
     }
 
     // 조회 - 상위 N명
-    private List<RankingEntryResponse> getTop(RankingType type, int size) {
-        Map<Long, Long>   rankings  = rankingRedisStore.findTop(type, size);
+    private List<RankingEntryResponse> getTop(RankingType type) {
+        Map<Long, Long>   rankings  = rankingRedisStore.findTop(type, RANKING_LIMIT);
         Map<Long, String> nicknames = playerService.getNicknames(rankings.keySet());
 
         // 정렬된 랭킹의 순서를 부여한 후 응답 반환
@@ -99,6 +110,35 @@ public class RankingService {
         );
 
         // 커밋 후 redis에 반영(기록)하기 위해 이벤트 발행, 리스너가 캐치하고 이벤트 실행
+        eventPublisher.publishEvent(new RankingRecordedEvent(playerId, type));
+    }
+
+    // 갱신 (전투력 한정)
+    public void recordCombatPower(Player player) {
+        int                    swordLevel = player.getSwordLevel();
+        List<ArtifactResponse> equipped   = artifactRepository.findAllByPlayerAndEquipSlotIsNotNull(player)
+                .stream()
+                .map(ArtifactResponse::from)
+                .toList();
+
+        // 전투력 계산 (임시)
+        CombatStat stat           = combatStatCalculator.calculate(swordLevel, equipped);
+        double     critMultiplier = constantTable.getDecimal(ConstantKey.CRIT_MULTIPLIER);
+        double     baseBattleTime = constantTable.getLong(ConstantKey.BASE_BATTLE_TIME);
+        double     expectedDps    = stat.attack() * stat.attackSpeed() * (1 + stat.critRate() * (critMultiplier - 1));
+        double     effectiveHp    = stat.maxHp() + expectedDps * stat.lifesteal() * baseBattleTime;
+        long       score          = (long) Math.floor(Math.sqrt(expectedDps * effectiveHp) * 10);
+
+        Long        playerId = player.getId();
+        RankingType type     = RankingType.COMBAT_POWER;
+
+        rankingRepository.upsertCurrent(
+                playerId,
+                type.name(),
+                score,
+                Instant.now()
+        );
+
         eventPublisher.publishEvent(new RankingRecordedEvent(playerId, type));
     }
 }

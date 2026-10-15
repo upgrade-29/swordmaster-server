@@ -81,6 +81,7 @@ public class SwordService {
 
         // 랭킹 등록 시도 (값은 DB(Ranking 테이블)의 기록 SQL 내부에서 비교한 후에 기록 시도)
         rankingService.recordRanking(player, RankingType.SWORD_LEVEL, level);
+        rankingService.recordCombatPower(player);   // 전투력 랭킹 기록
 
         return new SwordEnhanceResponse(
                 result,
@@ -121,6 +122,9 @@ public class SwordService {
 
         // 재화 획득
         CurrenciesResponse currenciesResponse = currencyService.grant(player, CURRENCY_TYPE, price, CurrencyReason.EQUIP_SELL);
+
+        // 전투력 랭킹 기록
+        rankingService.recordCombatPower(player);
 
         return new SwordSellResponse(
                 swordResponse,

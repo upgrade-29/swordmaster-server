@@ -27,11 +27,28 @@ public interface RankingRepository extends JpaRepository<PlayerRanking, Long> {
         ON DUPLICATE KEY UPDATE
             achieved_at = IF(new.score > player_rankings.score, new.achieved_at, player_rankings.achieved_at),
             score       = GREATEST(player_rankings.score, new.score)
-        """, nativeQuery = true)
+    """, nativeQuery = true)
     void upsertIfHigher(
             @Param("playerId") Long    playerId,
             @Param("type")     String  type,
             @Param("score")    long    score,
             @Param("now")      Instant now
             );
+
+    // 전투력 랭킹 저장용
+    // 현재 값으로 항상 덮어 씀 (시각은 score 값이 변경될 때에만 갱신하여 기록)
+    @Modifying
+    @Query(value = """
+        INSERT INTO player_rankings (player_id, type, score, achieved_at)
+        VALUES (:playerId, :type, :score, :now) AS new
+        ON DUPLICATE KEY UPDATE
+            achieved_at = IF(new.score <> player_rankings.score, new.achieved_at, player_rankings.achieved_at),
+            score       = new.score
+    """, nativeQuery = true)
+    void upsertCurrent(
+            @Param("playerId") Long    playerId,
+            @Param("type")     String  type,
+            @Param("score")    long    score,
+            @Param("now")      Instant now
+    );
 }
