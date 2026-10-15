@@ -1,5 +1,6 @@
 package com.swordmaster.jwt;
 
+import com.swordmaster.jwt.service.RedisTokenService;
 import com.swordmaster.user.entity.User;
 import com.swordmaster.user.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
@@ -23,6 +24,19 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {//admin의 인증을 만들어주는 기능
     private final JwtProvider jwtProvider;
     private final UserRepository userRepository;
+    private final RedisTokenService redisTokenService;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (!"POST".equals(request.getMethod())) {
+            return false;
+        }
+        String path = request.getServletPath();
+        return "/api/auth/signup".equals(path)
+                || "/api/auth/login".equals(path)
+                || "/api/auth/refresh".equals(path)
+                || "/api/auth/logout".equals(path);
+    }
 
     @Override
     protected void doFilterInternal(
@@ -40,8 +54,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {//admin의 �
             String token = header.substring(7);
 
             try { // 검증과 사용자 ID 추출을 한 번에 수행
-                Long userId =
-                        jwtProvider.getUserId(token);
+                JwtProvider.AccessIdentity identity = jwtProvider.getIdentity(token);
+                Long userId = identity.userId();
+
+                if (!redisTokenService.touch(userId, identity.sessionId())) {
+                    SecurityContextHolder.clearContext();
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
 
                 User user = userRepository.findById(userId).orElse(null);
 

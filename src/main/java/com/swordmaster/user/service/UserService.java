@@ -1,7 +1,7 @@
 package com.swordmaster.user.service;
 
 import com.swordmaster.common.BusinessException;
-import com.swordmaster.jwt.JwtProvider;
+import com.swordmaster.jwt.service.RedisTokenService;
 import com.swordmaster.user.dto.LoginRequest;
 import com.swordmaster.user.dto.LoginResponse;
 import com.swordmaster.user.dto.SignupRequest;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtProvider jwtProvider;
+    private final RedisTokenService redisTokenService;
 
     @Transactional
     public void signup(@Valid SignupRequest request) {
@@ -49,9 +49,8 @@ public class UserService {
             throw new BusinessException(
                     HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
-        String token = jwtProvider.createToken(user.getId());
         user.updateLastLoginAt();
-        return new LoginResponse(token);
+        return redisTokenService.issue(user.getId());
     }
 
     @Transactional

@@ -1,7 +1,6 @@
 package com.swordmaster.jwt;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -10,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtProvider {
@@ -28,44 +28,37 @@ public class JwtProvider {
     }
 
     // 로그인 성공 후 사용자 ID로 JWT 생성
-    public String createToken(Long userId) {
+    public String createToken(Long userId, String sessionId) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .subject(userId.toString()) // sub: 사용자 ID
+                .claim("sid", sessionId)
                 .issuedAt(now)              // iat: 발급 시각
                 .expiration(expiration)    // exp: 만료 시각
                 .signWith(secretKey)       // 키로 서명
                 .compact();                // JWT 문자열 생성
     }
 
-    // 서명, 만료 여부, 필요한 사용자 정보 검증
-    public boolean validateToken(String token) {
-        try {
-            Claims claims = parseClaims(token);
+    public record AccessIdentity(Long userId, String sessionId) {}
 
-            // 이 서비스의 토큰은 만료 시각이 반드시 있어야 함
-            if (claims.getExpiration() == null) {
-                return false;
-            }
-
-            // 사용자 ID가 Long으로 변환 가능한지도 확인
-            Long.parseLong(claims.getSubject());
-
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    // 검증한 JWT의 sub에서 사용자 ID 추출
-    public Long getUserId(String token) {
+    // 서명과 만료 시각을 검증하고 사용자와 로그인 세션을 추출한다.
+    public AccessIdentity getIdentity(String token) {
         Claims claims = parseClaims(token);
         if (claims.getExpiration() == null) {
             throw new IllegalArgumentException("만료 시각이 필요합니다.");
         }
-        return Long.valueOf(claims.getSubject());
+        Long userId = Long.valueOf(claims.getSubject());
+        String sessionId = claims.get("sid", String.class);
+        if (sessionId == null) {
+            throw new IllegalArgumentException("로그인 세션이 필요합니다.");
+        }
+        String normalized = UUID.fromString(sessionId).toString();
+        if (!normalized.equals(sessionId)) {
+            throw new IllegalArgumentException("잘못된 로그인 세션입니다.");
+        }
+        return new AccessIdentity(userId, sessionId);
     }
 
     // 서명을 검증하고 토큰에 담긴 정보(Claims)를 반환

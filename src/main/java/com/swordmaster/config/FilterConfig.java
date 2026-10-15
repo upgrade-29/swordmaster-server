@@ -29,7 +29,9 @@ public class FilterConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.POST,//일부를 제외한 모든 곳에 적용하는 방법, 다른 방법들도 쓰고 싶은니 주석처리
                                 "/api/auth/signup",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/logout"
                         ).permitAll() //로그인과 회원가입 시에는 토큰이 존재하지 않는다.
                         // HTTP 연결을 허용하고 STOMP CONNECT에서 JWT 인증
                         .requestMatchers("/ws").permitAll()

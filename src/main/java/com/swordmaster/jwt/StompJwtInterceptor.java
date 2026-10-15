@@ -1,5 +1,6 @@
 package com.swordmaster.jwt;
 
+import com.swordmaster.jwt.service.RedisTokenService;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
@@ -12,11 +13,13 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Component;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class StompJwtInterceptor implements ChannelInterceptor {
     private final JwtProvider jwtProvider;
+    private final RedisTokenService redisTokenService;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -51,6 +54,9 @@ public class StompJwtInterceptor implements ChannelInterceptor {
                 throw new AccessDeniedException("허용되지 않은 송신 주소입니다.");
             }
         }
+        if (command == StompCommand.SEND || command == StompCommand.SUBSCRIBE) {
+            checkSession(accessor, command == StompCommand.SEND);
+        }
         return message;
     }
 
@@ -60,11 +66,39 @@ public class StompJwtInterceptor implements ChannelInterceptor {
             throw new AccessDeniedException("JWT가 필요합니다.");
         }
         try {
-            Long userId = jwtProvider.getUserId(header.substring(7));
+            String token = header.substring(7);
+            JwtProvider.AccessIdentity identity = jwtProvider.getIdentity(token);
+            if (!redisTokenService.isActive(identity.userId(), identity.sessionId())) {
+                throw new AccessDeniedException("로그인이 만료되었습니다.");
+            }
+            Map<String, Object> attributes = accessor.getSessionAttributes();
+            if (attributes == null) {
+                throw new AccessDeniedException("연결 정보가 없습니다.");
+            }
+            attributes.put("accessToken", token);
             accessor.setUser(new UsernamePasswordAuthenticationToken(
-                    userId.toString(), null, List.of()));
+                    identity.userId().toString(), null, List.of()));
         } catch (JwtException | IllegalArgumentException e) {
             throw new AccessDeniedException("JWT가 만료되었거나 유효하지 않습니다.");
+        }
+    }
+
+    private void checkSession(StompHeaderAccessor accessor, boolean activity) {
+        Map<String, Object> attributes = accessor.getSessionAttributes();
+        Object value = attributes == null ? null : attributes.get("accessToken");
+        if (!(value instanceof String token)) {
+            throw new AccessDeniedException("인증이 필요합니다.");
+        }
+        try {
+            JwtProvider.AccessIdentity identity = jwtProvider.getIdentity(token);
+            boolean active = activity
+                    ? redisTokenService.touch(identity.userId(), identity.sessionId())
+                    : redisTokenService.isActive(identity.userId(), identity.sessionId());
+            if (!active) {
+                throw new AccessDeniedException("로그인이 만료되었습니다.");
+            }
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new AccessDeniedException("새 access token으로 다시 연결해주세요.");
         }
     }
 }
