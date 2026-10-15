@@ -9,6 +9,6 @@ public record Artifact(
         double         baseValue,
         double         valuePerLevel,
         String         name,
-        String         code             // PK (?)
+        String         code             // PK
 ) {
 }

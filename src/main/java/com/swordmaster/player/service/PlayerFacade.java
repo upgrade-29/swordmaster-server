@@ -9,6 +9,7 @@ import com.swordmaster.equipment.sword.dto.SwordResponse;
 import com.swordmaster.player.dto.PlayerCreateRequest;
 import com.swordmaster.player.dto.PlayerResponse;
 import com.swordmaster.player.entity.Player;
+import com.swordmaster.ranking.service.RankingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class PlayerFacade {
     private final PlayerService   playerService;
     private final CurrencyService currencyService;
     private final ArtifactService artifactService;
+    private final RankingService  rankingService;
 
     // 조회
     @Transactional(readOnly = true)
@@ -59,6 +61,9 @@ public class PlayerFacade {
 
         // 스테이지 진행도 (새 플레이어는 0)
         StageProgress stageProgress = new StageProgress(player.getClearedStage());
+
+        // 전투력 랭킹 기록
+        rankingService.recordCombatPower(player);
 
         return PlayerResponse.of(
                 userId,

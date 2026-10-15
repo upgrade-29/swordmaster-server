@@ -90,12 +90,12 @@ public class GlobalExceptionHandler {
         return getError(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 방식입니다.");
     }
 
-    // 잘못됭 Content-Type (ex_ 본문을 보내면서 'Content-type: application/json' 헤더를 빠뜨리는 경우)
+    // 잘못된 Content-Type (ex_ 본문을 보내면서 'Content-type: application/json' 헤더를 빠뜨리는 경우)
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
         log.warn("HttpMediaTypeNotSupportedException: {}", e.getContentType());
 
-        return getError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content-Type은 application/json 이어야 합니다");
+        return getError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content-Type은 application/json 이어야 합니다.");
     }
 
     // 존재하지 않는 URL

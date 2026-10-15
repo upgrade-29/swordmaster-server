@@ -36,8 +36,8 @@ public class PlayerRanking {
     private RankingType type;
 
     @Column(nullable = false)
-    private long score;     // 최고 기록 (변경 시 무조건 증가해야 함)
+    private long score;                 // 기록
 
     @Column(name = "achieved_at", nullable = false)
-    private Instant achievedAt;     // 최고 기록 달성 시각
+    private Instant achievedAt;         // 기록 달성 시각
 }

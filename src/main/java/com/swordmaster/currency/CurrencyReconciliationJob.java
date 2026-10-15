@@ -18,7 +18,7 @@ import java.util.List;
 public class CurrencyReconciliationJob {
     private final CurrencyHistoryRepository currencyHistoryRepository;
 
-    @Scheduled(cron = "0 0 1 * * *")    // 매일 새벽 1시
+    @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")    // 매일 새벽 1시
     @Transactional(readOnly = true)
     public void check() {
         List<PlayerCurrency> mismatched = currencyHistoryRepository.findMismatched();
