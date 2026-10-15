@@ -1,5 +1,7 @@
 package com.swordmaster.battle.session;
 
+import com.swordmaster.battle.BattleEndReason;
+import com.swordmaster.battle.BattleErrorCode;
 import com.swordmaster.battle.dto.BattleResultVerifyResponse;
 import com.swordmaster.battle.dto.CombatStat;
 import com.swordmaster.battle.simulation.BattleSubStageResultEnum;
@@ -155,12 +157,13 @@ class BattleSessionRedisTest {
         BattleResultVerifyResponse response = new BattleResultVerifyResponse(
                 3, BattleSubStageResultEnum.PLAYER_DEAD, 3, 0.0, 360, null
         );
+        BattleEndResult result = new BattleEndResult(BattleEndReason.PLAYER_DEAD, 3, null, response);
 
         assertTrue(repository.findEndResult(battleId).isEmpty());
 
-        repository.saveEndResult(battleId, response);
+        repository.saveEndResult(battleId, result);
 
-        assertEquals(response, repository.findEndResult(battleId).orElseThrow());
+        assertEquals(result, repository.findEndResult(battleId).orElseThrow());
         assertTrue(redis.getExpire("battle:end:" + battleId) > 0);
     }
 
@@ -185,6 +188,7 @@ class BattleSessionRedisTest {
                 () -> lock.execute(userId, () -> lock.execute(userId, () -> "inner")));
 
         assertEquals(HttpStatus.CONFLICT, e.getStatus());
+        assertEquals(BattleErrorCode.REQUEST_IN_PROGRESS.name(), e.getCode());
     }
 
     @Test

@@ -1,0 +1,89 @@
+# ① 이름과 실행 조건
+name: Deploy (deploy-test)
+
+on:
+  push:
+    branches: [deploy-test]
+  workflow_dispatch:
+
+# ② 권한과 동시 실행 제어
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+# ③ 공통 값
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: swordmaster
+  ASG_NAME: swordmaster-asg
+  IMAGE_TAG_PARAM: /swordmaster/prod/IMAGE_TAG
+
+# ④ 작업 실행 환경
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # ⑤ 단계별
+    steps:
+      - name: 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: JDK 21 준비
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: jar 빌드
+        run: |
+          chmod +x gradlew
+          ./gradlew clean bootJar -x test
+
+      - name: AWS 로그인 (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - name: ECR 로그인
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: ARM 빌드 준비 (QEMU)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Buildx 준비
+        uses: docker/setup-buildx-action@v3
+
+      - name: 이미지 태그 만들기
+        id: tag
+        run: echo "tag=v$(TZ=Asia/Seoul date +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: arm64 이미지 빌드 및 push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}
+
+      - name: IMAGE_TAG 갱신
+        run: |
+          aws ssm put-parameter \
+            --name "$IMAGE_TAG_PARAM" \
+            --value "${{ steps.tag.outputs.tag }}" \
+            --type String --overwrite
+
+      - name: 인스턴스 새로 고침 시작
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name "$ASG_NAME" \
+            --preferences '{"MinHealthyPercentage":100,"MaxHealthyPercentage":200,"InstanceWarmup":180}'

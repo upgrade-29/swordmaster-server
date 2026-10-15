@@ -80,7 +80,7 @@ class BattleRewardServiceTest {
 
         user   = new User("battle_" + unique + "@test.com", "password");
         em.persist(user);
-        player = playerRepository.save(new Player(user, 0));
+        player = playerRepository.save(new Player(user, "b_" + unique, 0));
         // 골드 0, 다이아 0으로 시작 (CurrencyService.createAll은 시작 골드를 지급하므로 직접 생성)
         for (CurrencyType type : CurrencyType.values()) em.persist(new PlayerCurrency(player, type));
         em.flush();
