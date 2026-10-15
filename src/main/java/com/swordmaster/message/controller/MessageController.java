@@ -54,7 +54,7 @@ public class MessageController {
 
         messageService.deliverPublicMessage(
                 user.id(),
-                player.getId().toString(),
+                player.getNickname(),
                 content
         );
     }
