@@ -1,5 +1,6 @@
 package com.swordmaster.battle.session;
 
+import com.swordmaster.battle.BattleEndReason;
 import com.swordmaster.battle.dto.BattleEndResponse;
 import com.swordmaster.battle.dto.BattleResultVerifyResponse;
 import com.swordmaster.battle.dto.BattleRewards;
@@ -68,10 +69,12 @@ class BattleSessionJsonTest {
                 3, BattleSubStageResultEnum.ENEMY_DEAD, 3, 2800.0, 480, end
         );
 
-        String                     json     = mapper.writeValueAsString(response);
-        BattleResultVerifyResponse restored = mapper.readValue(json, BattleResultVerifyResponse.class);
+        BattleEndResult result = new BattleEndResult(BattleEndReason.CLEARED, 3, end, response);
 
-        assertEquals(response, restored);
+        String          json     = mapper.writeValueAsString(result);
+        BattleEndResult restored = mapper.readValue(json, BattleEndResult.class);
+
+        assertEquals(result, restored);
         assertTrue(json.contains("\"isVictory\":true"), json);
         assertTrue(json.contains("\"gold\":15480"), json);
     }
