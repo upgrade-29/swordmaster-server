@@ -16,7 +16,7 @@ public class IdempotencyKeyCleanupJob {
 
     private static final Duration RETENTION = Duration.ofDays(1);
 
-    @Scheduled(cron = "0 0 1 * * *")
+    @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")
     @Transactional
     public void cleanup() {
         idempotencyKeyRepository.deleteOlderThan(Instant.now().minus(RETENTION));

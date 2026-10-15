@@ -20,6 +20,7 @@ import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.idempotency.service.IdempotencyService;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.service.PlayerService;
+import com.swordmaster.ranking.service.RankingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class ArtifactService {
     private final CurrencyService      currencyService;
     private final IdempotencyService   idempotencyService;
     private final ConstantTable        constantTable;
+    private final RankingService       rankingService;
 
     // 임시 설정 값
     private static final int          SLOT_COUNT    = 3;
@@ -102,19 +104,20 @@ public class ArtifactService {
         // 강화 재료 검사
         if (materialCount < requiredCount) throw new BusinessException(EquipmentErrorCode.NOT_ENOUGH_MATERIAL);
 
+        // 재화 소비 (+ 재화량 검사)
+        long               cost               = artifactEnhance.gold();
+        CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
+
         // 강화
         playerArtifact.changeLevel(nextLevel);
         playerArtifact.changeMaterialCount(materialCount - requiredCount);
         artifactRepository.save(playerArtifact);
 
-        List<ArtifactResponse> artifactResponses = List.of(ArtifactResponse.from(playerArtifact));
-
-        // 재화 소비 (+ 재화량 검사)
-        long               cost               = artifactEnhance.gold();
-        CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
+        // 전투력 랭킹 기록
+        rankingService.recordCombatPower(player);
 
         return new ArtifactEnhanceResponse(
-                artifactResponses,
+                List.of(ArtifactResponse.from(playerArtifact)),
                 currenciesResponse
         );
     }
@@ -149,6 +152,9 @@ public class ArtifactService {
         equipped.add(required);
         artifactRepository.save(required);
 
+        // 전투력 랭킹 기록
+        rankingService.recordCombatPower(player);
+
         return toSortedResponses(equipped);
     }
 
@@ -160,9 +166,13 @@ public class ArtifactService {
         Player               player   = playerService.getMe(userId);
         List<PlayerArtifact> equipped = doRemove(player, slot);
 
+        // 전투력 랭킹 기록
+        rankingService.recordCombatPower(player);
+
         return toSortedResponses(equipped);
     }
 
+    // 해제 - 공통
     private List<PlayerArtifact> doRemove(Player player, int slot) {
         List<PlayerArtifact> equipped = artifactRepository.findAllByPlayerAndEquipSlotIsNotNull(player);
 

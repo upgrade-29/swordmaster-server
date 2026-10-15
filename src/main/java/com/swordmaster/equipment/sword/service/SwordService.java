@@ -17,6 +17,8 @@ import com.swordmaster.idempotency.service.IdempotencyService;
 import com.swordmaster.message.service.MessageService;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.service.PlayerService;
+import com.swordmaster.ranking.RankingType;
+import com.swordmaster.ranking.service.RankingService;
 import com.swordmaster.reward.Reward;
 import com.swordmaster.reward.RewardType;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class SwordService {
     private final PlayerService      playerService;
     private final CurrencyService    currencyService;
     private final IdempotencyService idempotencyService;
+    private final RankingService     rankingService;
     private final MessageService     messageService;
 
     // 임시 설정 값
@@ -75,11 +78,15 @@ public class SwordService {
         EnhanceResult result  = success ? EnhanceResult.SUCCESS : EnhanceResult.DESTROYED;
         int           level   = success ? sword.level() + 1 : swordTable.getFirst().level();
 
+        // 재화 소비 (+ 재화량 검사)
+        CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
+
         // 검 레벨 변경(강화)
         SwordResponse swordResponse = playerService.changeSwordLevel(player, level);
 
-        // 재화 소비 (+ 재화량 검사)
-        CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
+        // 랭킹 등록 시도 (값은 DB(Ranking 테이블)의 기록 SQL 내부에서 비교한 후에 기록 시도)
+        rankingService.recordRanking(player, RankingType.SWORD_LEVEL, level);
+        rankingService.recordCombatPower(player);   // 전투력 랭킹 기록
 
         Long userId = player.getUser().getId();
         String displayName = player.getNickname();
@@ -143,6 +150,9 @@ public class SwordService {
 
         // 재화 획득
         CurrenciesResponse currenciesResponse = currencyService.grant(player, CURRENCY_TYPE, price, CurrencyReason.EQUIP_SELL);
+
+        // 전투력 랭킹 기록
+        rankingService.recordCombatPower(player);
 
         return new SwordSellResponse(
                 swordResponse,

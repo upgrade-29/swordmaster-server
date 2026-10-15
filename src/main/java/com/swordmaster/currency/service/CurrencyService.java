@@ -68,8 +68,8 @@ public class CurrencyService {
 
     // 변경 (지급)
     public CurrenciesResponse grant(Player player, CurrencyType type, long value, CurrencyReason reason) {
-        // 양수인지 확인
-        checkPositive(value);
+        // 양수인지 확인 (음수면 예외, 0이면 변경 없이 반환)
+        if (!checkPositive(value)) return getAll(player);
 
         Map<CurrencyType, Long> currencies       = new EnumMap<>(CurrencyType.class);
         List<PlayerCurrency>    playerCurrencies = currencyRepository.findAllByPlayer(player);
@@ -94,8 +94,8 @@ public class CurrencyService {
 
     // 변경 (차감)
     public CurrenciesResponse consume(Player player, CurrencyType type, long value, CurrencyReason reason) {
-        // 양수인지 확인
-        checkPositive(value);
+        // 양수인지 확인 (음수면 예외, 0이면 변경 없이 반환)
+        if (!checkPositive(value)) return getAll(player);
 
         Map<CurrencyType, Long> currencies       = new EnumMap<>(CurrencyType.class);
         List<PlayerCurrency>    playerCurrencies = currencyRepository.findAllByPlayer(player);
@@ -128,11 +128,13 @@ public class CurrencyService {
     }
 
     // 공통 (조회, 유효성 검사)
-    // 요구하는 변화량은 마이너스(또는 0)가 될수 없어야 함 (발생하면 서버 내의 코드 에러)
-    private void checkPositive(long value) {
-        if (value <= 0) {
-            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "변화량(" + value + ")이 0보다 작거나 같습니다.");
+    // 요구하는 변화량은 0보다 커야 함
+    private boolean checkPositive(long value) {
+        if (value < 0) {
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "변화량(" + value + ")이 0보다 작습니다.");
         }
+
+        return value > 0;
     }
 
     // 공통 (저장)
