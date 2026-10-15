@@ -10,7 +10,6 @@ import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.service.PlayerService;
 import com.swordmaster.reward.Reward;
 import com.swordmaster.reward.service.RewardService;
-import com.swordmaster.shop.ShopErrorCode;
 import com.swordmaster.shop.dto.ShopPurchaseRequest;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
 import com.swordmaster.shop.entity.ShopPurchaseLog;
@@ -18,6 +17,7 @@ import com.swordmaster.shop.repository.ShopPurchaseLogRepository;
 import com.swordmaster.shop.table.ShopCatalog;
 import com.swordmaster.shop.table.ShopProduct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,12 +55,21 @@ public class ShopService {
 
         //2. 상품 조회 - 시트의 데이터에서 productCode 에 대응하는 상품과 그 상품목록을 가져옴
         ShopProduct product = shopCatalog.findProduct(productCode)
-                .orElseThrow(() -> new BusinessException(ShopErrorCode.PRODUCT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "PRODUCT NOT FOUND"));
 
         List<Reward> rewards = shopCatalog.findRewards(productCode);
 
         //3. 결제 진행 - 플레이어의 재화를 차감 및 보상을 지급
         CurrencyType priceType = product.priceType();
+
+        //현재 플레이어의 재화 확인
+        long currentCurrency = switch (priceType) {
+            case GOLD -> currencyService.getAll(player).gold();
+            case DIAMOND -> currencyService.getAll(player).diamond();
+        };
+
+        if (currentCurrency < product.price())
+            throw new BusinessException(HttpStatus.CONFLICT, "NOT_ENOUGH_" + priceType.name());
 
         //유저의 재화에서 가격만큼 차감을 시도.
         currencyService.consume(player, priceType, product.price(), CurrencyReason.PURCHASE);

@@ -14,8 +14,7 @@ public enum BattleErrorCode {
     NO_ACTIVE_BATTLE   (HttpStatus.NOT_FOUND,   "진행 중인 전투가 없습니다."),
     BATTLE_ID_MISMATCH (HttpStatus.CONFLICT,    "현재 진행 중인 전투가 아닙니다."),
     VERIFY_FAILED      (HttpStatus.BAD_REQUEST, "전투 결과 검증에 실패했습니다."),     // 서버는 이미 패배로 정산한 상태
-    GAME_DATA_OUTDATED (HttpStatus.CONFLICT,    "게임 데이터가 갱신되었습니다. 다시 접속해 주세요."),  // 세션은 유지
-    REQUEST_IN_PROGRESS(HttpStatus.CONFLICT,    "이전 전투 요청을 처리 중입니다.");     // 같은 유저의 다른 전투 요청을 아직 처리 중
+    GAME_DATA_OUTDATED (HttpStatus.CONFLICT,    "게임 데이터가 갱신되었습니다. 다시 접속해 주세요.");  // 세션은 유지
 
     private final HttpStatus status;
     private final String     message;

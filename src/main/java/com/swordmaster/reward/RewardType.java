@@ -4,7 +4,7 @@ package com.swordmaster.reward;
 public enum RewardType {
     GOLD,
     ARTIFACT,
-    GACHA_BOX,
+    GACHA,
     PROFILE_IMAGE,
     ITEM
 }

@@ -34,7 +34,7 @@ public class RewardService {
                 yield List.of(reward);
             }
 
-            case GACHA_BOX -> {
+            case GACHA -> {
                 List<Reward> granted = new ArrayList<>();
                 for (Reward drawn : gachaReward(reward.rewardCode(), reward.amount())) {
                     granted.addAll(reward(player, drawn, reason));   // 뽑힌 보상을 실제 지급

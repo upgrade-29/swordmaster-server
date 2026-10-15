@@ -1,10 +1,11 @@
 package com.swordmaster.battle.session;
 
-import com.swordmaster.battle.BattleErrorCode;
+import com.swordmaster.common.BusinessException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -40,7 +41,9 @@ public class BattleLock {
         String  token  = UUID.randomUUID().toString();
         Boolean locked = redis.opsForValue().setIfAbsent(key, token, ttl);
 
-        if (!Boolean.TRUE.equals(locked)) throw BattleErrorCode.REQUEST_IN_PROGRESS.exception();
+        if (!Boolean.TRUE.equals(locked)) {
+            throw new BusinessException(HttpStatus.CONFLICT, "이전 전투 요청을 처리 중입니다.");
+        }
 
         try {
             return action.get();

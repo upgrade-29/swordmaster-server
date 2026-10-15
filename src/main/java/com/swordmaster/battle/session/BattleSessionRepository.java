@@ -1,5 +1,6 @@
 package com.swordmaster.battle.session;
 
+import com.swordmaster.battle.dto.BattleResultVerifyResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -12,7 +13,7 @@ import java.util.Optional;
 
 // 키 구조
 //  - battle:session:{userId}  진행 중인 전투 (유저당 하나만 존재)
-//  - battle:end:{battleId}    종료된 전투의 결과 (세션 삭제 후 같은 보고 / 포기가 다시 와도 같은 응답을 반환)
+//  - battle:end:{battleId}    종료된 전투의 마지막 응답 (세션 삭제 후 같은 보고가 다시 와도 같은 응답을 반환)
 @Slf4j
 @Repository
 public class BattleSessionRepository {
@@ -57,14 +58,14 @@ public class BattleSessionRepository {
         redis.delete(SESSION_KEY + userId);
     }
 
-    // 종료 결과 (저장)
-    public void saveEndResult(String battleId, BattleEndResult result) {
-        redis.opsForValue().set(END_KEY + battleId, write(result), endResultTtl);
+    // 종료 응답 (저장)
+    public void saveEndResult(String battleId, BattleResultVerifyResponse response) {
+        redis.opsForValue().set(END_KEY + battleId, write(response), endResultTtl);
     }
 
-    // 종료 결과 (조회)
-    public Optional<BattleEndResult> findEndResult(String battleId) {
-        return read(redis.opsForValue().get(END_KEY + battleId), BattleEndResult.class);
+    // 종료 응답 (조회)
+    public Optional<BattleResultVerifyResponse> findEndResult(String battleId) {
+        return read(redis.opsForValue().get(END_KEY + battleId), BattleResultVerifyResponse.class);
     }
 
     // 공통 (직렬화)

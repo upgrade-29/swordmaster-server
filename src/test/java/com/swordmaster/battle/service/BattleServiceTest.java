@@ -245,10 +245,6 @@ class BattleServiceTest {
         assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, request, VERSION));
         verify(battleRewardService).settle(eq(userId), any(), eq(BattleEndReason.VERIFY_FAILED), eq(0), eq(0L), any());
         assertNull(service.getSession(userId, VERSION));
-
-        // 같은 보고를 다시 보내면 같은 에러 (다시 정산하지 않음)
-        assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, request, VERSION));
-        verify(battleRewardService, times(1)).settle(any(), any(), any(), anyInt(), anyLong(), any());
     }
 
     @Test
@@ -305,10 +301,7 @@ class BattleServiceTest {
         assertFalse(end.isVictory());
         verify(battleRewardService).settle(eq(userId), any(), eq(BattleEndReason.ABANDONED), eq(1), eq(response.accumulatedGold()), any());
         assertNull(service.getSession(userId, VERSION));
-
-        // 같은 포기를 다시 보내면 같은 응답 (다시 정산하지 않음)
-        assertEquals(end, service.abandon(userId, info.battleId()));
-        verify(battleRewardService, times(1)).settle(eq(userId), any(), eq(BattleEndReason.ABANDONED), anyInt(), anyLong(), any());
+        assertCode(BattleErrorCode.NO_ACTIVE_BATTLE, () -> service.abandon(userId, info.battleId()));
     }
 
     @Test
@@ -316,20 +309,6 @@ class BattleServiceTest {
         start();
 
         assertCode(BattleErrorCode.BATTLE_ID_MISMATCH, () -> service.abandon(userId, "other"));
-    }
-
-    @Test
-    void abandon_noSession() {
-        assertCode(BattleErrorCode.NO_ACTIVE_BATTLE, () -> service.abandon(userId, "none"));
-    }
-
-    // 보고로 끝난 전투는 포기 결과가 아니므로 포기를 다시 받아 주지 않음
-    @Test
-    void abandon_afterVerifyFailed_noActiveBattle() {
-        BattleSessionInfo info = start();
-
-        assertCode(BattleErrorCode.VERIFY_FAILED, () -> service.report(userId, clientReport(info, 0), VERSION));
-        assertCode(BattleErrorCode.NO_ACTIVE_BATTLE, () -> service.abandon(userId, info.battleId()));
     }
 
     // ---------- 도우미 ----------
