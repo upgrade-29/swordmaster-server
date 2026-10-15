@@ -14,6 +14,7 @@ import com.swordmaster.equipment.sword.dto.SwordSellResponse;
 import com.swordmaster.equipment.sword.table.Sword;
 import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.idempotency.service.IdempotencyService;
+import com.swordmaster.message.service.MessageService;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.service.PlayerService;
 import com.swordmaster.ranking.RankingType;
@@ -24,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -37,10 +40,12 @@ public class SwordService {
     private final CurrencyService    currencyService;
     private final IdempotencyService idempotencyService;
     private final RankingService     rankingService;
+    private final MessageService     messageService;
 
     // 임시 설정 값
     private static final int          SCALE         = 10_000;
     private static final CurrencyType CURRENCY_TYPE = CurrencyType.GOLD;
+    private static final int          NOTICE_LEVEL  = 7;
 
     // 강화
     public SwordEnhanceResponse enhance(Long userId, SwordRequest request) {
@@ -82,6 +87,29 @@ public class SwordService {
         // 랭킹 등록 시도 (값은 DB(Ranking 테이블)의 기록 SQL 내부에서 비교한 후에 기록 시도)
         rankingService.recordRanking(player, RankingType.SWORD_LEVEL, level);
         rankingService.recordCombatPower(player);   // 전투력 랭킹 기록
+
+        Long userId = player.getUser().getId();
+        String displayName = player.getNickname();
+        String content = success
+                ? "검 " + level + "강에 성공했습니다!"
+                : "검 " + sword.level() + "강 → "
+                        + (sword.level() + 1) + "강 강화에 실패하여 검이 파괴되었습니다.";
+
+        // DB 저장이 확정된 뒤 강화 결과를 알린다.(트렌젝션 내부에서 강화 결과 알림보다 앞에 있지만, 강화결과와 db 적용 이후 적용이된다.)
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        messageService.sendPrivateSystemNotice(userId, content);
+
+                        if (success && level >= NOTICE_LEVEL) {
+                            messageService.sendEnhancementNotice(
+                                    userId, displayName, level
+                            );
+                        }
+                    }
+                }
+        );
 
         return new SwordEnhanceResponse(
                 result,
