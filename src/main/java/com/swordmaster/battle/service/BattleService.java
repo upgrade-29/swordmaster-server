@@ -7,6 +7,7 @@ import com.swordmaster.battle.dto.BattleResultVerifyRequest;
 import com.swordmaster.battle.dto.BattleResultVerifyResponse;
 import com.swordmaster.battle.dto.BattleSessionInfo;
 import com.swordmaster.battle.dto.CombatStat;
+import com.swordmaster.battle.session.BattleEndResult;
 import com.swordmaster.battle.session.BattleLock;
 import com.swordmaster.battle.session.BattleSession;
 import com.swordmaster.battle.session.BattleSessionRepository;
@@ -112,33 +113,51 @@ public class BattleService {
             Optional<BattleSession> current = sessionRepository.find(userId);
             Optional<BattleSession> found   = current.filter(session -> session.battleId().equals(request.battleId()));
 
-            // 이미 검증한 보고면 다시 검증하지 않고 처음 응답을 그대로 반환
-            Optional<BattleResultVerifyResponse> previous = found.isPresent()
-                    ? found.map(BattleSession::lastReport)
-                           .filter(last -> last.subStageIndex() == request.subStageIndex())
-                           .map(BattleSession.LastReport::response)
-                    : sessionRepository.findEndResult(request.battleId())
-                           .filter(response -> response.subStageIndex() == request.subStageIndex());
+            if (found.isPresent()) {
+                // 이미 검증한 보고면 다시 검증하지 않고 처음 응답을 그대로 반환
+                Optional<BattleResultVerifyResponse> previous = found.map(BattleSession::lastReport)
+                        .filter(last -> last.subStageIndex() == request.subStageIndex())
+                        .map(BattleSession.LastReport::response);
 
-            if (previous.isPresent()) return previous.get();
+                return previous.orElseGet(() -> verifyAndApply(userId, found.get(), request));
+            }
 
-            BattleSession session = found.orElseThrow(() -> current.isPresent()
+            // 이 보고로 이미 끝난 전투면 처음과 같은 결과 (검증 실패도 다시 정산하지 않고 같은 에러)
+            Optional<BattleEndResult> ended = sessionRepository.findEndResult(request.battleId())
+                    .filter(result -> result.subStageIndex() == request.subStageIndex());
+
+            if (ended.isPresent()) {
+                if (ended.get().reason() == BattleEndReason.VERIFY_FAILED) throw BattleErrorCode.VERIFY_FAILED.exception();
+                if (ended.get().report() != null) return ended.get().report();
+            }
+
+            throw current.isPresent()
                     ? BattleErrorCode.BATTLE_ID_MISMATCH.exception()
-                    : BattleErrorCode.NO_ACTIVE_BATTLE.exception());
-
-            return verifyAndApply(userId, session, request);
+                    : BattleErrorCode.NO_ACTIVE_BATTLE.exception();
         });
     }
 
     // 전투 포기 (패배 처리, 모은 골드는 지급)
     public BattleEndResponse abandon(Long userId, String battleId) {
         return battleLock.execute(userId, () -> {
-            BattleSession session = findCurrent(userId, battleId);
+            Optional<BattleSession> current = sessionRepository.find(userId);
+            Optional<BattleSession> found   = current.filter(session -> session.battleId().equals(battleId));
 
-            BattleEndResponse end = settle(userId, session, BattleEndReason.ABANDONED,
+            // 이미 포기한 전투면 다시 정산하지 않고 처음 응답을 그대로 반환
+            if (found.isEmpty()) {
+                return sessionRepository.findEndResult(battleId)
+                        .filter(result -> result.reason() == BattleEndReason.ABANDONED)
+                        .map(BattleEndResult::battleEnd)
+                        .orElseThrow(() -> current.isPresent()
+                                ? BattleErrorCode.BATTLE_ID_MISMATCH.exception()
+                                : BattleErrorCode.NO_ACTIVE_BATTLE.exception());
+            }
+
+            BattleSession     session = found.get();
+            BattleEndResponse end     = settle(userId, session, BattleEndReason.ABANDONED,
                     session.subStageIndex(), session.accumulatedGold());
 
-            sessionRepository.delete(userId);
+            finish(userId, session, new BattleEndResult(BattleEndReason.ABANDONED, session.subStageIndex(), end, null));
 
             return end;
         });
@@ -168,8 +187,9 @@ public class BattleService {
             log.warn("전투 검증 실패: userId={}, battleId={}, subStage={}, reason={}",
                     userId, session.battleId(), index, failReason.get());
 
-            settle(userId, session, BattleEndReason.VERIFY_FAILED, index, session.accumulatedGold());
-            sessionRepository.delete(userId);
+            BattleEndResponse end = settle(userId, session, BattleEndReason.VERIFY_FAILED, index, session.accumulatedGold());
+
+            finish(userId, session, new BattleEndResult(BattleEndReason.VERIFY_FAILED, index, end, null));
 
             throw BattleErrorCode.VERIFY_FAILED.exception();
         }
@@ -210,10 +230,15 @@ public class BattleService {
                 index, result.resultEnum(), index, result.playerHp(), gold, end
         );
 
-        sessionRepository.saveEndResult(session.battleId(), response);
-        sessionRepository.delete(userId);
+        finish(userId, session, new BattleEndResult(reason, index, end, response));
 
         return response;
+    }
+
+    // 끝난 결과를 보관하고 세션 삭제
+    private void finish(Long userId, BattleSession session, BattleEndResult result) {
+        sessionRepository.saveEndResult(session.battleId(), result);
+        sessionRepository.delete(userId);
     }
 
     private BattleEndResponse settle(Long userId, BattleSession session, BattleEndReason reason,
@@ -233,15 +258,6 @@ public class BattleService {
                 log.warn("전투 정산 동시성 충돌 재시도 {}/{}: userId={}", retry + 1, SETTLE_MAX_RETRY, userId);
             }
         }
-    }
-
-    private BattleSession findCurrent(Long userId, String battleId) {
-        BattleSession session = sessionRepository.find(userId)
-                .orElseThrow(BattleErrorCode.NO_ACTIVE_BATTLE::exception);
-
-        if (!session.battleId().equals(battleId)) throw BattleErrorCode.BATTLE_ID_MISMATCH.exception();
-
-        return session;
     }
 
     private void checkGameDataVersion(String clientGameDataVersion) {
