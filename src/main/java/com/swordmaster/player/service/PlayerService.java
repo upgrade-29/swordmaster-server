@@ -14,6 +14,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,6 +31,14 @@ public class PlayerService {
     public Player getMe(Long userId) {
         return playerRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "플레이어 정보가 없습니다."));
+    }
+
+    @Transactional(readOnly = true)
+    // 조회 - 닉네임 리스트 (랭킹 시스템 용)
+    public Map<Long, String> getNicknames(Collection<Long> playerIds) {
+        return playerRepository.findAllById(playerIds)
+                .stream()
+                .collect(Collectors.toMap(Player::getId, Player::getNickname));
     }
 
     // 생성

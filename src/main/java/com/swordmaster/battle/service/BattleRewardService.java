@@ -22,6 +22,8 @@ import com.swordmaster.equipment.artifact.table.Artifact;
 import com.swordmaster.equipment.artifact.table.ArtifactTable;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.service.PlayerService;
+import com.swordmaster.ranking.RankingType;
+import com.swordmaster.ranking.service.RankingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,13 +41,14 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 @Transactional
 public class BattleRewardService {
-    private final PlayerService                 playerService;
-    private final ArtifactService               artifactService;
-    private final BattleHistoryRepository       battleHistoryRepository;
-    private final CurrencyService               currencyService;
-    private final StageTable                    stageTable;
-    private final DropRateTable                 dropRateTable;
-    private final ArtifactTable                 artifactTable;
+    private final PlayerService           playerService;
+    private final ArtifactService         artifactService;
+    private final BattleHistoryRepository battleHistoryRepository;
+    private final CurrencyService         currencyService;
+    private final StageTable              stageTable;
+    private final DropRateTable           dropRateTable;
+    private final ArtifactTable           artifactTable;
+    private final RankingService          rankingService;
 
     // gold: 지급할 골드 (마지막 처치 골드까지 포함한 최종값)
     public BattleEndResponse settle(
@@ -73,6 +76,9 @@ public class BattleRewardService {
 
         if (victory) {
             cleared = playerService.updateClearedStage(player, session.stage());
+
+            // 랭킹 등록 시도 (값은 DB(Ranking 테이블)의 기록 SQL 내부에서 비교한 후에 기록 시도)
+            rankingService.recordRanking(player, RankingType.STAGE_CLEARED, cleared);
 
             Optional<PlayerArtifact> dropped = dropArtifact(player, session.stage());
 
