@@ -16,6 +16,8 @@ import com.swordmaster.equipment.sword.table.SwordTable;
 import com.swordmaster.idempotency.service.IdempotencyService;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.service.PlayerService;
+import com.swordmaster.ranking.RankingType;
+import com.swordmaster.ranking.service.RankingService;
 import com.swordmaster.reward.Reward;
 import com.swordmaster.reward.RewardType;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class SwordService {
     private final PlayerService      playerService;
     private final CurrencyService    currencyService;
     private final IdempotencyService idempotencyService;
+    private final RankingService     rankingService;
 
     // 임시 설정 값
     private static final int          SCALE         = 10_000;
@@ -70,11 +73,14 @@ public class SwordService {
         EnhanceResult result  = success ? EnhanceResult.SUCCESS : EnhanceResult.DESTROYED;
         int           level   = success ? sword.level() + 1 : swordTable.getFirst().level();
 
+        // 재화 소비 (+ 재화량 검사)
+        CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
+
         // 검 레벨 변경(강화)
         SwordResponse swordResponse = playerService.changeSwordLevel(player, level);
 
-        // 재화 소비 (+ 재화량 검사)
-        CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
+        // 랭킹 등록 시도 (값은 DB(Ranking 테이블)의 기록 SQL 내부에서 비교한 후에 기록 시도)
+        rankingService.recordRanking(player, RankingType.SWORD_LEVEL, level);
 
         return new SwordEnhanceResponse(
                 result,

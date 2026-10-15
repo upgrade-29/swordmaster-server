@@ -98,7 +98,7 @@ public class RankingService {
                 Instant.now()
         );
 
-        // 커밋 후 redis에 반영하기 위해 이벤트 발행
+        // 커밋 후 redis에 반영(기록)하기 위해 이벤트 발행, 리스너가 캐치하고 이벤트 실행
         eventPublisher.publishEvent(new RankingRecordedEvent(playerId, type));
     }
 }

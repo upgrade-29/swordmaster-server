@@ -40,6 +40,4 @@ public class PlayerRanking {
 
     @Column(name = "achieved_at", nullable = false)
     private Instant achievedAt;     // 최고 기록 달성 시각
-
-    // 저장은 rankingRepository.upsertIfHigher로만 함 (생성자로 직접 저장하지 않음)
 }
