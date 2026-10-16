@@ -6,5 +6,6 @@ public enum RewardType {
     ARTIFACT,
     GACHA_BOX,
     PROFILE_IMAGE,
-    ITEM
+    ITEM,
+    DIAMOND
 }
