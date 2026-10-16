@@ -1,0 +1,43 @@
+package com.swordmaster.ranking.entity;
+
+import com.swordmaster.player.entity.Player;
+import com.swordmaster.ranking.RankingType;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.Instant;
+
+@Entity
+@Table(
+        name              = "player_rankings",
+        uniqueConstraints = @UniqueConstraint(
+                name        = "uk_player_rankings_player_type",
+                columnNames = {"player_id", "type"}
+        )
+)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class PlayerRanking {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "player_id", nullable = false)
+    private Player player;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)     // Hibernate 6.2 버전 이후부터 Enum 타입 컬럼을 MySQL 전용 타입으로 생성하는 문제에 대해 VARCHAR 타입으로 변경
+    @Column(nullable = false, length = 20)
+    private RankingType type;
+
+    @Column(nullable = false)
+    private long score;                 // 기록
+
+    @Column(name = "achieved_at", nullable = false)
+    private Instant achievedAt;         // 기록 달성 시각
+}

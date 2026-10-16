@@ -14,11 +14,11 @@ import java.time.Instant;
 public class MessageService {
     private final SimpMessagingTemplate messagingTemplate;
 
-    // 특정 사용자의 구독 중인 연결들에 시스템 알림을 보낸다.
+    // 특정 사용자의 구독 중인 연결들에 시스템 알림을 보낸다. 개인 메세지의 경우 id가 필요가 없지만 이후에 기록(저장)을 위해서 남겨둠
     public void sendPrivateSystemNotice(Long userId, String content) {
         MessageResponse message = new MessageResponse(
                 MessageType.SYSTEM_NOTICE,
-                null,
+                userId,
                 null,
                 content,
                 null,
@@ -62,20 +62,31 @@ public class MessageService {
 
     public void sendSystemNotice(String content) {
         MessageResponse message = new MessageResponse(
-                MessageType.SYSTEM_NOTICE, null, null,
-                content, null, Instant.now());
+                MessageType.SYSTEM_NOTICE,
+                null,
+                null,
+                content,
+                null,
+                Instant.now()
+        );
+
         messagingTemplate.convertAndSend("/topic/notices", message);
     }
 
     public void sendEnhancementNotice(Long userId, String nickname, int level) {
         MessageResponse message = new MessageResponse(
-                MessageType.SWORD_ENHANCEMENT, userId, nickname,
+                MessageType.SWORD_ENHANCEMENT,
+                userId,
+                nickname,
                 nickname + "님이 검 " + level + "강에 성공했습니다!",
-                level, Instant.now());
+                level,
+                Instant.now()
+        );
+
         messagingTemplate.convertAndSend("/topic/notices", message);
     }
 
-    // 호출하는 서비스에서 친구 관계·차단 여부와 발신자 정보를 검증해야 한다.
+    // 호출하는 서비스에서 친구 관계·차단 여부와 발신자 정보를 검증해야 한다. TODO: 친구 추가 기능 생성 시 활용
     public void deliverPrivateMessage(Long senderId, String senderNickname,
                                       Long receiverId, String content) {
         MessageResponse message = new MessageResponse(

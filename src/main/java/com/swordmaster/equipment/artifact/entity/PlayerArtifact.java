@@ -11,7 +11,6 @@ import org.hibernate.annotations.ColumnDefault;
 // playerId + equipSlot 조합은 유일해야 함 (같은 슬롯에 중복으로 저장할 수 없음)
 @Table(
         name              = "player_artifacts",
-//        indexes           = @Index(name = "idx_player_artifacts_player_id", columnList = "player_id"),
         uniqueConstraints = @UniqueConstraint(
                 name        = "uk_player_artifacts_player_slot",
                 columnNames = {"player_id", "equip_slot"}
