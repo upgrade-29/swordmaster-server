@@ -41,6 +41,12 @@ public class RewardService {
                 }
                 yield granted;
             }
+            
+            case DIAMOND -> {
+                diamondReward(player,reward.amount(),reason);
+                yield List.of(reward);
+            }
+            
             default -> throw new BusinessException(HttpStatus.NOT_IMPLEMENTED,
                     "지급처리가 구현되지 않은 보상입니다." + reward.rewardType());
         };
@@ -56,5 +62,9 @@ public class RewardService {
 
     private List<Reward> gachaReward(String rewardCode, long amount) {
         return gachaService.open(rewardCode, amount);
+    }
+
+    private void diamondReward(Player player, long amount, CurrencyReason reason) {
+        currencyService.grant(player, CurrencyType.DIAMOND, amount, reason);
     }
 }

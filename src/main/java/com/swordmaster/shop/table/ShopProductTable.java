@@ -2,6 +2,7 @@ package com.swordmaster.shop.table;
 
 import com.swordmaster.common.table.GoogleSheetClient;
 import com.swordmaster.common.table.SheetTable;
+import com.swordmaster.reward.RewardType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -49,8 +50,12 @@ public class ShopProductTable extends SheetTable<ShopProduct> {
             // 결제 재화는 Not Null
             if (product.priceType() == null) errors.add(at + "priceType이 비어 있습니다.");
 
-            // 가격은 0보다 커야 함 (무료 상품 허용 여부는 기획 확인 필요)
-            if (product.price() <= 0) errors.add(at + "price는 0보다 커야 합니다.");
+            // 가격은 0보다 커야 함
+            // 다이아는 현금 결제지만 지금은 다이아 재화 추가 수단으로 사용하기 위해 무료로 설정
+            boolean isDiamondProduct = RewardType.DIAMOND.name().equals(product.category());
+
+            if (product.price() <= 0 && !isDiamondProduct)
+                errors.add(at + "price는 0보다 커야 합니다.");
         }
     }
 
