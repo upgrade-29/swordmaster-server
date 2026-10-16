@@ -7,5 +7,9 @@ public enum RewardType {
     GACHA_BOX,
     PROFILE_IMAGE,
     ITEM,
-    DIAMOND
+    DIAMOND;
+
+    public boolean isCurrency() {
+        return this == GOLD || this == DIAMOND;
+    }
 }

@@ -2,7 +2,6 @@ package com.swordmaster.shop.table;
 
 import com.swordmaster.common.table.GoogleSheetClient;
 import com.swordmaster.common.table.SheetTable;
-import com.swordmaster.reward.RewardType;
 import com.swordmaster.reward.Reward;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -50,12 +49,12 @@ public class ShopProductRewardTable extends SheetTable<ShopProductReward> {
             // 지급 수량은 0보다 커야 함
             if (reward.amount() <= 0) errors.add(at + "amount는 0보다 커야 합니다.");
 
-            // GOLD는 rewardCode 없음, 나머지는 rewardCode 필수
+            // 재화형(GOLD, DIAMOND)은 rewardCode 없음, 나머지는 rewardCode 필수
             boolean noCode = reward.rewardCode() == null || reward.rewardCode().isBlank();
 
-            if (reward.rewardType() == RewardType.GOLD && !noCode)
-                errors.add(at + "GOLD는 rewardCode를 비워야 합니다.");
-            if (reward.rewardType() != RewardType.GOLD && noCode)
+            if (reward.rewardType().isCurrency() && !noCode)
+                errors.add(at + reward.rewardType() + "는 rewardCode를 비워야 합니다.");
+            if (!reward.rewardType().isCurrency() && noCode)
                 errors.add(at + reward.rewardType() + "는 rewardCode가 필요합니다.");
         }
     }
