@@ -6,5 +6,10 @@ public enum RewardType {
     ARTIFACT,
     GACHA_BOX,
     PROFILE_IMAGE,
-    ITEM
+    ITEM,
+    DIAMOND;
+
+    public boolean isCurrency() {
+        return this == GOLD || this == DIAMOND;
+    }
 }
