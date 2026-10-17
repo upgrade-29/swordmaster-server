@@ -1,8 +1,8 @@
 package com.swordmaster.shop.entity;
 
 
-import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.reward.Reward;
+import com.swordmaster.shop.PriceType;
 import com.swordmaster.shop.dto.ShopPurchaseResponse;
 import com.swordmaster.shop.table.ShopProduct;
 import jakarta.persistence.*;
@@ -47,8 +47,9 @@ public class ShopPurchaseLog {
     private String productCode; //구매한 상품의 코드
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "price_type", nullable = false, length = 10)
-    private CurrencyType priceType; //상품 구매에 사용한 재화의 종류
+    private PriceType priceType; //구매에 사용된 결제 방식
 
     @Column(name = "price", nullable = false)
     private long price; //상품 구매에 사용한 재화량
