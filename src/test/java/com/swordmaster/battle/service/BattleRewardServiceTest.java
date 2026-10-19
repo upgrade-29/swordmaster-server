@@ -284,7 +284,7 @@ class BattleRewardServiceTest {
     }
 
     private static Stage stage(int stage, double dropRate) {
-        return new Stage(stage, "NORMAL", 3, "BOSS", 1, 100, 500, dropRate, 0, "IMG");
+        return new Stage(stage, "NORMAL", 3, "BOSS", 1, 100, 500, dropRate, 0, "IMG", "스테이지");
     }
 
     private long count(String sql) {

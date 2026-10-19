@@ -60,6 +60,7 @@ public class StageTable extends SheetTable<Stage> {
                 errors.add(at + "artifactDropRate는 0 이상 1 이하여야 합니다.");
 
             if (isBlank(stage.imageCode())) errors.add(at + "imageCode가 비어 있습니다.");
+            if (isBlank(stage.name()))      errors.add(at + "name이 비어 있습니다.");
         }
     }
 
