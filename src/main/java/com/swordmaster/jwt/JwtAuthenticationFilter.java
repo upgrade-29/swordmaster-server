@@ -17,12 +17,25 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {//admin의 인증을 만들어주는 기능
     private final JwtProvider jwtProvider;
     private final UserRepository userRepository;
+
+    // 토큰이 필요 없는 인증 API는 검사 제외(만료된 access 토큰이 헤더에 남아있어도 refresh 가능하도록)
+    private static final Set<String> SKIP_PATHS = Set.of(
+            "/api/auth/signup",
+            "/api/auth/login",
+            "/api/auth/refresh"
+    );
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return SKIP_PATHS.contains(request.getServletPath());
+    }
 
     @Override
     protected void doFilterInternal(

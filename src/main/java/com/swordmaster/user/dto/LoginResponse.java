@@ -1,3 +1,3 @@
 package com.swordmaster.user.dto;
 
-public record LoginResponse(String accessToken) {}
+public record LoginResponse(String accessToken, String refreshToken) {}
