@@ -3,7 +3,7 @@ package com.swordmaster.battle.table;
 import com.swordmaster.battle.dto.CombatStat;
 
 public record Enemy(
-        String  appearanceCode,
+        //해당 위치의 appearanceCode를 제거
         boolean boss,
         double  attack,
         double  attackSpeed,

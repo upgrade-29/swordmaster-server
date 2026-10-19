@@ -70,8 +70,8 @@ public class SwordTable extends SheetTable<Sword> {
             if (sword.attackSpeed() < 0) errors.add(at + "attackSpeed는 0 이상이어야 합니다.");
             if (sword.maxHp()       < 0) errors.add(at + "maxHp는 0 이상이어야 합니다.");
 
-            // appearanceCode는 Not Blank
-            if (sword.appearanceCode() == null || sword.appearanceCode().isBlank())
+            // code는 Not Blank
+            if (sword.code() == null || sword.code().isBlank())
                 errors.add(at + "appearanceCode가 비어 있습니다.");
         }
     }
