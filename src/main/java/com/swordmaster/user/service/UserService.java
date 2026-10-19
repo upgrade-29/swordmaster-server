@@ -2,6 +2,7 @@ package com.swordmaster.user.service;
 
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.jwt.JwtProvider;
+import com.swordmaster.jwt.service.RefreshTokenService;
 import com.swordmaster.user.dto.LoginRequest;
 import com.swordmaster.user.dto.LoginResponse;
 import com.swordmaster.user.dto.SignupRequest;
@@ -21,6 +22,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public void signup(@Valid SignupRequest request) {
@@ -50,8 +52,9 @@ public class UserService {
                     HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
         String token = jwtProvider.createToken(user.getId());
+        String refreshToken = refreshTokenService.issue(user); //새 기기 로그인 시 이전 기기의 refresh 토큰은 무효화
         user.updateLastLoginAt();
-        return new LoginResponse(token);
+        return new LoginResponse(token, refreshToken);
     }
 
     @Transactional
