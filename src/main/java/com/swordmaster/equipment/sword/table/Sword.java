@@ -9,6 +9,6 @@ public record Sword(
         long   attackPower,
         double attackSpeed,
         long   maxHp,
-        String appearanceCode
+        String code
 ) {
 }
