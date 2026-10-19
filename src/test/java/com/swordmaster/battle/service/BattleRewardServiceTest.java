@@ -1,5 +1,6 @@
 package com.swordmaster.battle.service;
 
+import com.swordmaster.ranking.service.RankingService;
 import com.swordmaster.battle.BattleEndReason;
 import com.swordmaster.battle.dto.BattleEndResponse;
 import com.swordmaster.battle.dto.CombatStat;
@@ -17,7 +18,6 @@ import com.swordmaster.currency.entity.CurrencyHistory;
 import com.swordmaster.currency.entity.PlayerCurrency;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EquipmentGrade;
-import com.swordmaster.equipment.EquipmentStat;
 import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
 import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.equipment.artifact.service.ArtifactService;
@@ -69,6 +69,7 @@ class BattleRewardServiceTest {
     @MockitoBean ConstantTable constantTable;     // CurrencyService 의존성
     @MockitoBean SwordTable    swordTable;        // PlayerService 의존성
     @MockitoBean ArtifactEnhanceTable artifactEnhanceTable;   // ArtifactService 의존성
+    @MockitoBean RankingService       rankingService;         // ArtifactService 의존성
     @MockitoBean IdempotencyService   idempotencyService;
 
     private User   user;
@@ -91,7 +92,7 @@ class BattleRewardServiceTest {
                 new DropRate(EquipmentGrade.COMMON, 1.0), new DropRate(EquipmentGrade.RARE, 0),
                 new DropRate(EquipmentGrade.EPIC, 0),     new DropRate(EquipmentGrade.LEGENDARY, 0)));
         when(artifactTable.getAll()).thenReturn(List.of(
-                new Artifact(EquipmentGrade.COMMON, EquipmentStat.CRIT_RATE, 0.1, 0.01, "A", "ART_A")));
+                new Artifact("ART_A", "A", EquipmentGrade.COMMON)));
         when(artifactTable.existsByCode("ART_A")).thenReturn(true);
     }
 
@@ -117,7 +118,7 @@ class BattleRewardServiceTest {
         assertEquals(600L, end.currencies().gold());
         assertEquals(1, end.stageProgress().clearedStage());
         assertEquals(1, end.changedArtifacts().size());
-        assertEquals(0, end.changedArtifacts().getFirst().level());
+        assertEquals(1, end.changedArtifacts().getFirst().level());       // 초기 레벨 1
         assertEquals(1, end.changedArtifacts().getFirst().materialCount());    // 처음 얻어도 재료 1
 
         em.flush();
@@ -129,7 +130,7 @@ class BattleRewardServiceTest {
 
         assertEquals(1, artifacts.size());
         assertEquals("ART_A", artifacts.getFirst().getCode());
-        assertEquals(0, artifacts.getFirst().getLevel());
+        assertEquals(1, artifacts.getFirst().getLevel());
         assertEquals(1, artifacts.getFirst().getMaterialCount());
         assertNull(artifacts.getFirst().getEquipSlot());
 
