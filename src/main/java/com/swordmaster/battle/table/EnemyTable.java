@@ -43,7 +43,7 @@ public class EnemyTable extends SheetTable<Enemy> {
 
             // 문자열 컬럼은 Not Blank
             if (isBlank(enemy.name()))           errors.add(at + "name이 비어 있습니다.");
-            if (isBlank(enemy.appearanceCode())) errors.add(at + "appearanceCode가 비어 있습니다.");
+            if (isBlank(enemy.code())) errors.add(at + "appearanceCode가 비어 있습니다."); //해당 부분의 appearanceCode를 code 로 변경
 
             // 공격속도, 최대 체력은 0보다 커야 함 (공격 시각 = n / 공격속도)
             if (enemy.attack()      <  0) errors.add(at + "attack은 0 이상이어야 합니다.");
