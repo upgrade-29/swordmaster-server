@@ -1,6 +1,7 @@
 package com.swordmaster.shop;
 
 
+import com.swordmaster.ranking.service.RankingService;
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.currency.CurrencyReason;
@@ -9,7 +10,6 @@ import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.entity.PlayerCurrency;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.equipment.EquipmentGrade;
-import com.swordmaster.equipment.EquipmentStat;
 import com.swordmaster.equipment.artifact.entity.PlayerArtifact;
 import com.swordmaster.equipment.artifact.repository.ArtifactRepository;
 import com.swordmaster.equipment.artifact.service.ArtifactService;
@@ -83,6 +83,7 @@ class ShopPurchaseIntegrationTest {
     @MockitoBean GachaCatalog         gachaCatalog;
     @MockitoBean ArtifactTable        artifactTable;
     @MockitoBean ArtifactEnhanceTable artifactEnhanceTable;  // ArtifactService 의존성
+    @MockitoBean RankingService       rankingService;        // ArtifactService 의존성
     @MockitoBean ConstantTable        constantTable;         // CurrencyService 의존성
     @MockitoBean SwordTable           swordTable;            // PlayerService 의존성
     @MockitoBean IdempotencyService   idempotencyService;    // 재전송 판별은 범위 밖 → 항상 "처음 온 요청"
@@ -237,7 +238,7 @@ class ShopPurchaseIntegrationTest {
     @Test
     void 아티팩트_상자에서_같은_아티팩트가_여러번_나오면_한_줄에_재료로_쌓인다() {
         giveDiamond(1000);
-        Artifact art = new Artifact(EquipmentGrade.COMMON, EquipmentStat.CRIT_RATE, 0.1, 0.01, "A", "ART_A");
+        Artifact art = new Artifact("ART_A", "A", EquipmentGrade.COMMON);
         when(artifactTable.getAll()).thenReturn(List.of(art));
         when(artifactTable.existsByCode("ART_A")).thenReturn(true);
         gachaPool("ART_BOX", new GachaEntry("ART_BOX", RewardType.ARTIFACT, "ART_A", 1, 1));

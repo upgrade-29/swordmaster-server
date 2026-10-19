@@ -92,16 +92,16 @@ public class ArtifactService {
         Artifact       artifact       = artifactTable.findByCode(code)
                 .orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "아티팩트를 강화할 수 없습니다."));
 
-        int nextLevel = playerArtifact.getLevel() + 1;
-
         // 최대 레벨 검사 (Enhance 테이블이 온전한 경우를 가정)
-        ArtifactEnhance artifactEnhance = artifactEnhanceTable.findByGradeAndLevel(artifact.grade(), nextLevel)
+        int level = playerArtifact.getLevel();
+
+        ArtifactEnhance artifactEnhance = artifactEnhanceTable.findByGradeAndLevel(artifact.grade(), level)
                 .orElseThrow(() -> new BusinessException(EquipmentErrorCode.ARTIFACT_MAX_LEVEL));
 
+        // 강화 재료 검사
         int materialCount = playerArtifact.getMaterialCount();
         int requiredCount = artifactEnhance.materialCount();
 
-        // 강화 재료 검사
         if (materialCount < requiredCount) throw new BusinessException(EquipmentErrorCode.NOT_ENOUGH_MATERIAL);
 
         // 재화 소비 (+ 재화량 검사)
@@ -109,7 +109,7 @@ public class ArtifactService {
         CurrenciesResponse currenciesResponse = currencyService.consume(player, CURRENCY_TYPE, cost, CurrencyReason.EQUIP_ENHANCE);
 
         // 강화
-        playerArtifact.changeLevel(nextLevel);
+        playerArtifact.changeLevel(level + 1);
         playerArtifact.changeMaterialCount(materialCount - requiredCount);
         artifactRepository.save(playerArtifact);
 
