@@ -105,7 +105,7 @@ class BattleServiceTest {
                         enemy("BOSS",   "TRUE",  20, 0.8, 2500)),
                 2L, List.of(row("stage", 1L, "enemyCode", "NORMAL", "enemyCount", 1L, "bossCode", "BOSS",
                         "statMultiplier", 1.2, "goldPerEnemy", GOLD_PER_ENEMY, "bossGold", BOSS_GOLD,
-                        "artifactDropRate", 0.5, "recommendedPower", 0L, "imageCode", "IMG"))
+                        "artifactDropRate", 0.5, "recommendedPower", 0L, "imageCode", "IMG", "name", "스테이지"))
         ));
 
         // config 시트 값 (ConstantTable은 모든 키가 있어야 생성되므로 전투에 쓰는 값만 mock)

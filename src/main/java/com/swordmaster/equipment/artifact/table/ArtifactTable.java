@@ -37,23 +37,16 @@ public class ArtifactTable extends SheetTable<Artifact> {
         // 각 컬럼들에 대하여
         for (int i = 0; i < rows.size(); i++) {
             Artifact artifact = rows.get(i);
-            String at = (i + 1) + "행의 ";
+            String   at       = (i + 1) + "행의 ";
 
             // code는 Not Blank
-            if (artifact.code() == null || artifact.code().isBlank())
-                errors.add(at + "code가 비어 있습니다.");
+            if (artifact.code() == null || artifact.code().isBlank()) errors.add(at + "code가 비어 있습니다.");
 
             // name은 Not Blank
-            if (artifact.name() == null || artifact.name().isBlank())
-                errors.add(at + "name이 비어 있습니다.");
+            if (artifact.name() == null || artifact.name().isBlank()) errors.add(at + "name이 비어 있습니다.");
 
-            // grade, statType은 Not Null (열거형이 아닌 값은 변환 단계에서 걸러짐)
-            if (artifact.grade()    == null) errors.add(at  + "grade가 비어 있습니다.");
-            if (artifact.statType() == null) errors.add((at + "statType이 비어 있습니다."));
-
-            // 기타 컬럼은 각각 0 이상
-            if (artifact.baseValue()     < 0) errors.add(at + "baseValue는 0 이상이어야 합니다.");
-            if (artifact.valuePerLevel() < 0) errors.add(at + "valuePerLevel은 0 이상이어야 합니다.");
+            // grade는 Not Null (열거형이 아닌 값(null 제외)은 변환 단계에서 걸러짐)
+            if (artifact.grade() == null) errors.add(at + "grade가 비어 있습니다.");
         }
     }
 
