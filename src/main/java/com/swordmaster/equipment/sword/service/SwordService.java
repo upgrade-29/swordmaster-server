@@ -90,17 +90,19 @@ public class SwordService {
 
         Long userId = player.getUser().getId();
         String displayName = player.getNickname();
-        String content = success
-                ? "검 " + level + "강에 성공했습니다!"
-                : "검 " + sword.level() + "강 → "
-                        + (sword.level() + 1) + "강 강화에 실패하여 검이 파괴되었습니다.";
+        //TODO: 폴리싱 단계에서 메세지를 보내는 것이 불필요해 보인다고 주석처리, 이후에 활용가능
+//        String content = success
+//                ? "검 " + level + "강에 성공했습니다!"
+//                : "검 " + sword.level() + "강 → "
+//                        + (sword.level() + 1) + "강 강화에 실패하여 검이 파괴되었습니다.";
 
         // DB 저장이 확정된 뒤 강화 결과를 알린다.(트렌젝션 내부에서 강화 결과 알림보다 앞에 있지만, 강화결과와 db 적용 이후 적용이된다.)
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        messageService.sendPrivateSystemNotice(userId, content);
+                        //TODO: 개인 메세지 발송부분
+                        //messageService.sendPrivateSystemNotice(userId, content);
 
                         if (success && level >= NOTICE_LEVEL) {
                             messageService.sendEnhancementNotice(
