@@ -10,7 +10,8 @@ public record Stage(
         long   bossGold,
         double artifactDropRate,    // 승리 시 아티팩트 드랍 확률 (0 ~ 1)
         long   recommendedPower,
-        String imageCode
+        String imageCode,
+        String name                 // 스테이지 이름
 ) {
     // 세부 스테이지 (클라 BattleEngine과 같은 규칙, index는 0부터)
     public int subStageCount() { return enemyCount + 1; }

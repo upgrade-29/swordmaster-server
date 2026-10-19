@@ -42,7 +42,7 @@ class BattleTableTest {
     private static Map<String, Object> stage(long stage, String enemyCode, String bossCode) {
         return row("stage", stage, "enemyCode", enemyCode, "enemyCount", 3L, "bossCode", bossCode,
                    "statMultiplier", 1.2, "goldPerEnemy", 100L, "bossGold", 500L, "artifactDropRate", 1L,
-                   "recommendedPower", 500L, "imageCode", "STAGE_01");
+                   "recommendedPower", 500L, "imageCode", "STAGE_01", "name", "스테이지");
     }
 
     private static final List<Map<String, Object>> ENEMIES = List.of(enemy("NORMAL", "FALSE"), enemy("BOSS", "TRUE"));
