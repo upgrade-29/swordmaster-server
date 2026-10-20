@@ -1,9 +1,9 @@
 # ① 이름과 실행 조건
-name: Deploy (deploy-test)
+name: Deploy (prod)
 
 on:
   push:
-    branches: [deploy-test]
+    branches: [deploy-test,main]
   workflow_dispatch:
 
 # ② 권한과 동시 실행 제어
