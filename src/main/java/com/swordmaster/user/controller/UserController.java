@@ -1,11 +1,8 @@
 package com.swordmaster.user.controller;
 
+import com.swordmaster.externalapi.service.ExternalAPIService;
 import com.swordmaster.jwt.service.RefreshTokenService;
-import com.swordmaster.user.dto.LoginRequest;
-import com.swordmaster.user.dto.LoginResponse;
-import com.swordmaster.user.dto.RefreshRequest;
-import com.swordmaster.user.dto.SignupRequest;
-import com.swordmaster.user.dto.UserResponse;
+import com.swordmaster.user.dto.*;
 import com.swordmaster.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
     private final UserService userService;
     private final RefreshTokenService refreshTokenService;
+    private final ExternalAPIService externalAPIService;
 
     @PostMapping("/api/auth/signup")
     public ResponseEntity<Void> signup(
@@ -35,6 +33,12 @@ public class UserController {
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request){
         return ResponseEntity.ok(userService.login(request));
+    }
+
+    @PostMapping("/api/auth/login/google")
+    public ResponseEntity<LoginResponse> googleLogin(
+            @Valid @RequestBody GoogleLoginRequest request){
+        return ResponseEntity.ok(externalAPIService.googleLogin(request));
     }
 
     @PostMapping("/api/auth/refresh") //자동로그인, access 토큰 만료 시 재발급
