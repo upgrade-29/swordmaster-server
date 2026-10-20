@@ -175,6 +175,158 @@ flowchart LR
 </details>
 
 <details>
+  <summary>상점 구매 기능</summary>
+  <div markdown="1">
+
+### 담당 기능
+
+| 기능 | 구현 내용 |
+| --- | --- |
+| 상점 구매 | 상품 조회 → 결제 → 보상 지급 → 구매 기록을 **하나의 트랜잭션**으로 처리 |
+| 결제 방식 | `PriceType` (GOLD, DIAMOND, FREE, CASH) — 재화 결제만 차감, FREE는 차감 없이 지급, CASH는 미구현이라 시트 검증에서 차단 |
+| 보상 지급 | `RewardService`가 골드·다이아·아티팩트·가챠 보상을 지급, 상점 외 기능도 공통 사용 |
+| 가챠 | 가중치 추첨(`SecureRandom`), 추첨(`GachaService`)과 지급(`RewardService`) 분리 |
+| 가챠 등급 랜덤 | ARTIFACT 행의 rewardCode가 비어 있으면 artifact 시트에서 같은 grade인 아티팩트 중 균등 추첨 |
+| 중복 결제 방지 | 클라이언트 `requestId`로 공용 멱등성 모듈을 거쳐 같은 요청은 1회만 처리 (보관 1일) |
+| 동시성 | 낙관적 락 충돌·데드락(1213)은 최대 2회 재시도, 그 외 락 대기 초과는 즉시 503 (`ShopFacade`) |
+| 기획 데이터 | 구글 시트(`shopProducts`, `shopProductRewards`, `gachaEntry`)를 부팅 시 로드·검증 |
+| CI/CD | GitHub Actions → ECR → ASG Instance Refresh 무중단 배포 (유지보수 및 배포 참고) |
+
+### API
+
+**`POST /api/shop/purchase`** (JWT 필요)
+
+```json
+// 요청
+{
+  "requestId": "3f6c1e2a-...-uuid",   // 클라이언트가 구매 시도마다 생성, 재시도 시 같은 값
+  "productCode": "ARTIFACT_LEGENDARY_10"
+}
+```
+
+```json
+// 응답 200
+{
+  "rewards": [                          // 실제 지급된 보상 (가챠는 뽑힌 결과로 펼쳐짐)
+    { "rewardType": "ARTIFACT", "rewardCode": "GIANT_SHEATH", "amount": 1 },
+    { "rewardType": "GOLD", "rewardCode": null, "amount": 500 }
+  ],
+  "currencies": { "gold": 1500, "diamond": 26000 }   // 지급 후 최신 재화
+}
+```
+
+| 상황 | 응답 |
+| --- | --- |
+| 같은 `requestId` 재요청 | 처음 처리한 **같은 응답** 반환 (재결제 없음) |
+| 없는 상품 | 404 `상품을 찾을 수 없습니다.` |
+| 재화 부족 | 재화 모듈의 부족 에러 (차감·지급 모두 롤백) |
+| 동시 요청 충돌 재시도 초과 | 503 `요청이 몰려 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.` |
+
+- 응답의 `rewardCode`는 항상 **실제 코드**로 내려감 → 클라이언트는 빈 코드 처리 불필요
+- 클라이언트는 응답이 불확실(타임아웃 등)하면 **같은 `requestId`로 재요청**
+
+### 구매 처리 흐름
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant F as ShopFacade
+    participant S as ShopService (@Transactional)
+    participant I as IdempotencyService
+    participant R as RewardService
+    participant G as GachaService
+    C->>F: POST /api/shop/purchase
+    F->>S: purchase (충돌 시 최대 2회 재시도)
+    S->>I: requestId 확인
+    alt 이미 처리된 요청
+        I-->>C: 저장된 이전 응답
+    else 새 요청
+        S->>S: 상품·보상 조회 (시트)
+        S->>S: PriceType이 재화면 차감
+        S->>R: 상품 보상 지급
+        R->>G: GACHA_BOX면 추첨만 요청
+        G-->>R: 뽑힌 보상 목록 (구체 코드)
+        R->>R: 뽑힌 보상 재귀 지급
+        S->>S: shop_purchase_logs 저장
+        S-->>C: 지급 보상 + 최신 재화
+    end
+```
+
+### 가챠 추첨
+
+1. 같은 `gachaCode` 행 중 **weight 비율**로 한 행 선택
+2. 선택된 행이 *ARTIFACT + rewardCode 빈칸 + grade* 이면 artifact 시트에서 **같은 등급 아티팩트 중 균등 추첨**
+
+```
+아티팩트 1종 확률 = (행 weight ÷ 같은 gachaCode weight 합) × (1 ÷ 해당 등급 아티팩트 수)
+```
+
+| 구분 | 값 |
+| --- | --- |
+| 상자 여는 횟수 | `shopProductRewards`의 GACHA_BOX amount (최대 10) |
+| 등급 랜덤 행 amount | 1 고정 (결과 개수 = 상자 횟수) |
+| 지정 행의 grade | 지급에 사용되지 않음 (참고 표시) |
+| 등급별 후보 | 부팅 시 `ArtifactTable`에서 미리 묶어 Pool에 보관 → 추첨 중 시트 재조회 없음 |
+
+- artifact 시트에 같은 등급이 추가·삭제되면 **확률이 자동으로 바뀜** (예: LEGENDARY 4종 → 5종이면 각 25% → 20%)
+- 한 상자에 지정 행과 같은 등급 랜덤 행이 함께 있으면 그 아티팩트 확률은 **두 경로의 합**
+
+### 데이터 모델
+
+```mermaid
+erDiagram
+    users ||..o{ shop_purchase_logs : "user_id (FK 없음)"
+    shop_purchase_logs {
+        BIGINT id PK
+        BIGINT user_id
+        CHAR request_id "idx(user_id, request_id)"
+        VARCHAR product_code
+        VARCHAR price_type "GOLD, DIAMOND, FREE, CASH"
+        BIGINT price
+        JSON rewards "상품에 설정된 보상"
+        JSON response_body "실제 지급 결과 (가챠 결과 포함)"
+        DATETIME created_at
+    }
+```
+
+- 상품·보상·가챠 정의는 DB가 아닌 **구글 시트**에 있고 코드 값으로 연결
+
+### 기획 시트 규칙
+
+| 시트 | 규칙 |
+| --- | --- |
+| 공통 | 헤더(첫 행) 변경 금지 — 필요 시 **코드 배포 → 시트 변경** / 선택값 대문자 / "없음"은 빈칸 |
+| `shopProducts` | `GOLD`·`DIAMOND`는 price > 0, `FREE`는 price = 0, `CASH`는 현재 사용 불가 |
+| `shopProductRewards` | 재화(GOLD·DIAMOND)는 rewardCode 빈칸 / GACHA_BOX의 rewardCode = gachaCode, amount = 상자 횟수 |
+| `gachaEntry` | 아래 표 |
+
+| gachaEntry 용도 | rewardType | rewardCode | grade | amount |
+| --- | --- | --- | --- | --- |
+| 재화 | GOLD / DIAMOND | 빈칸 | `NONE` | 지급량 |
+| 지정 아티팩트 | ARTIFACT | 아티팩트 코드 | 무시됨 | 지급 개수 |
+| 등급 랜덤 | ARTIFACT | **빈칸** | 등급 (`NONE` 제외) | **1** |
+
+- 가챠 결과에 `GACHA_BOX` 금지 (무한 재귀 방지)
+- 같은 gachaCode 안에 같은 보상 행 중복 금지
+
+### 핵심 설계
+
+- **한 번의 결제, 한 번의 지급:** 차감·지급·기록이 한 트랜잭션 → 중간 실패 시 전부 롤백, 멱등성 키로 네트워크 재시도에도 중복 결제 없음
+- **결제 방식과 재화의 분리:** 지갑 재화(`CurrencyType`)와 가격표 결제 방식(`PriceType`)을 분리 → 무료·현금 결제를 재화 로직 수정 없이 추가
+- **추첨과 지급의 분리:** 가챠는 결과 목록만 만들고 지급은 기존 보상 경로 재사용 → 등급 랜덤 추가 시 지급 코드 변경 없음
+- **기획 데이터 부팅 검증 (fail-fast):** 결제 방식별 가격, 재화 보상 코드, 아티팩트 코드 존재, 등급 후보 수, 등급 랜덤 amount 등을 시작 시 검사하고 에러를 모아 한 번에 출력 → 잘못된 데이터가 운영에 노출되지 않음
+- **구매 기록 보존:** 상품 정의(`rewards`)와 실제 지급 결과(`response_body`)를 함께 저장 → 문의·정산 대응
+
+### 향후 과제
+
+| 항목 | 내용 |
+| --- | --- |
+| 구매 한도 | FREE 다이아 상품은 현재 무제한 수령 가능 → 현금 결제 구현 시 대체 |
+| 현금 결제 (IAP) | Google Play 영수증 검증, `iap_receipts` 테이블, consume 처리 설계 (미구현) 구현 시엔 기존 서비스와 로직 분리(구글 서버와 통신이 문제) |
+  </div>
+</details>
+
+<details>
   <summary>인증과 인가</summary>
   <div markdown="1">
     
