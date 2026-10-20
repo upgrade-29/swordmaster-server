@@ -88,6 +88,17 @@ public class SwordService {
         rankingService.recordRanking(player, RankingType.SWORD_LEVEL, level);
         rankingService.recordCombatPower(player);   // 전투력 랭킹 기록
 
+        // 강화 방송 공지
+        broadcastEnhance(player, sword, success, level);
+
+        return new SwordEnhanceResponse(
+                result,
+                swordResponse,
+                currenciesResponse
+        );
+    }
+
+    private void broadcastEnhance(Player player, Sword sword, boolean success, int level) {
         Long userId = player.getUser().getId();
         String displayName = player.getNickname();
         //TODO: 폴리싱 단계에서 메세지를 보내는 것이 불필요해 보인다고 주석처리, 이후에 활용가능
@@ -111,12 +122,6 @@ public class SwordService {
                         }
                     }
                 }
-        );
-
-        return new SwordEnhanceResponse(
-                result,
-                swordResponse,
-                currenciesResponse
         );
     }
 

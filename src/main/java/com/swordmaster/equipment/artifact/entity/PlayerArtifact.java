@@ -46,7 +46,7 @@ public class PlayerArtifact {
     public PlayerArtifact(Player player, String code) {
         this.player   = player;
         this.code     = code;
-        level         = 0;
+        level         = 1;      // 아티팩트 초기 레벨: 0 -> 1로 변경
         materialCount = 0;
         equipSlot     = null;
     }
