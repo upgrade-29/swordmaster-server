@@ -2,7 +2,6 @@ package com.swordmaster.shop.service;
 
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyReason;
-import com.swordmaster.currency.CurrencyType;
 import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
 import com.swordmaster.idempotency.service.IdempotencyService;
@@ -59,23 +58,22 @@ public class ShopService {
 
         List<Reward> rewards = shopCatalog.findRewards(productCode);
 
-        //3. 결제 진행 - 플레이어의 재화를 차감 및 보상을 지급
-        CurrencyType priceType = product.priceType();
+        //3. 결제 진행 - 플레이어의 재화를 차감
+        if (product.priceType().isCurrency()) {
+            currencyService.consume(player, product.priceType().currency(),
+                    product.price(), CurrencyReason.PURCHASE);
+        }
 
-        //유저의 재화에서 가격만큼 차감을 시도.
-        currencyService.consume(player, priceType, product.price(), CurrencyReason.PURCHASE);
-
-        //재화가 차감되었다면 유저에게 보상을 지급하고 지급이 완료된 보상들을 리스트로 저장
+        //4. 보상 지급
         List<Reward> granted = new ArrayList<>();
 
         for (Reward reward : rewards) {
             granted.addAll(rewardService.reward(player, reward, CurrencyReason.PURCHASE));
         }
 
-        //차감 및 보상 완료
+        //5.구매를 위한 다른 작업들이 전부 처리되었다면 구매기록을 저장하고 응답을 반환
         CurrenciesResponse currencies = currencyService.getAll(player);
 
-        //4.구매를 위한 다른 작업들이 전부 처리되었다면 구매기록을 저장하고 응답을 반환
         ShopPurchaseResponse response = new ShopPurchaseResponse(granted, currencies);
 
         shopPurchaseLogRepository.save(new ShopPurchaseLog(userId, requestId, product, rewards, response));
