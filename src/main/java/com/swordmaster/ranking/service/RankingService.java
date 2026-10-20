@@ -53,8 +53,13 @@ public class RankingService {
         Player               player = playerService.getMe(userId);
         RankingEntryResponse me     = getMe(player, type);      // 실시간 기록
 
-        // 집계본에 현재 내 기록이 없고, 내 기록이 꼴찌일 경우에 인원수를 맞춤 (+ 1)
-        long total = Math.max(rankingRedisStore.count(type), me.rank());
+        Long    playerId    = player.getId();
+        boolean inSnapshot  = rankingRedisStore.existsInSnapshot(type, playerId);
+        boolean rankChanged = rankingRedisStore.isChangedSinceSnapshot(type, playerId);
+
+        // 실시간 기록은 있는데 집계본에 내 기록이 없으면, 순위 비교 대상에 나를 포함하도록 인원수를 맞춤 (+ 1)
+        boolean hasRecord = me.rank() > 0;
+        long    total     = rankingRedisStore.count(type) + ((hasRecord && !inSnapshot) ? 1 : 0);
 
         Instant now          = Instant.now();
         Instant nextUpdateAt = SNAPSHOT_CRON.next(now.atZone(SNAPSHOT_ZONE)).toInstant();
@@ -62,6 +67,7 @@ public class RankingService {
         return new RankingResponse(
                 getTop(type),                           // 상위 N명 (집계본 기준)
                 me,                                     // 내 랭킹 (실시간 기준)
+                rankChanged,                            // 집계 이후 내 기록 변동 여부
                 total,                                  // 총 인원 수 (클라이언트에서 내 랭킹(순위)의 백분율 계산용)
                 rankingRedisStore.findUpdatedAt(type),  // 상위 목록 집계 시각
                 nextUpdateAt,                           // 다음 집계 시각

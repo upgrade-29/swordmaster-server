@@ -132,8 +132,50 @@ public class RankingRedisStore {
                         Double.POSITIVE_INFINITY
                 );
 
+        long aheadCount = (ahead == null) ? 0 : ahead;
+
+        // 집계본의 내 예전 기록이 지금보다 높으면(ex_ 전투력 하락) 나 자신이 위에서 같이 세어졌으므로 제외
+        Double mySnapshotScore = redis.opsForZSet()
+                .score(
+                        snapshotKey(type),
+                        playerId.toString()
+                );
+
+        if (mySnapshotScore != null && mySnapshotScore > myScore) aheadCount--;
+
         // 오름차순으로 정렬된 기록에서 자신보다 뒤에 있는 기록이 없으면(자신의 점수가 가장 높으면) 1위
-        return ((ahead == null) ? 0 : ahead) + 1;
+        return aheadCount + 1;
+    }
+
+    // 조회 - 집계본에 내 기록이 있는지 여부
+    public boolean existsInSnapshot(RankingType type, Long playerId) {
+        Double score = redis.opsForZSet()
+                .score(
+                        snapshotKey(type),
+                        playerId.toString()
+                );
+
+        return score != null;
+    }
+
+    // 조회 - 집계 이후 내 기록 변동 여부 (집계본에 없거나 실시간 점수와 다르면 true, 실시간 기록이 없으면 false)
+    public boolean isChangedSinceSnapshot(RankingType type, Long playerId) {
+        Double liveScore = redis.opsForZSet()
+                .score(
+                        key(type),
+                        playerId.toString()
+                );
+
+        if (liveScore == null) return false;
+
+        Double snapshotScore = redis.opsForZSet()
+                .score(
+                        snapshotKey(type),
+                        playerId.toString()
+                );
+
+        // 합산 점수(기록 + 달성 시각)로 비교하므로, 같은 기록을 다시 달성해도 시각이 바뀌면 변동으로 간주
+        return !liveScore.equals(snapshotScore);
     }
 
     // 조회 - 전체 인원 수
