@@ -227,6 +227,7 @@ class ShopPurchaseIntegrationTest {
                 });
         assertThat(response.currencies().gold()).isEqualTo(1000);
         assertThat(response.currencies().diamond()).isZero();
+        assertThat(response.changedArtifacts()).isEmpty();   // 아티팩트가 없으면 빈 리스트
 
         // DB: 실제로 반영됐는지
         CurrenciesResponse after = currencies();
@@ -250,6 +251,11 @@ class ShopPurchaseIntegrationTest {
 
         assertThat(response.rewards()).hasSize(3)
                 .allSatisfy(r -> assertThat(r.rewardCode()).isEqualTo("ART_A"));
+
+        // 응답: 지급 후 상태가 한 줄로 담겨 클라이언트가 바로 반영할 수 있다
+        assertThat(response.changedArtifacts()).hasSize(1);
+        assertThat(response.changedArtifacts().getFirst().code()).isEqualTo("ART_A");
+        assertThat(response.changedArtifacts().getFirst().materialCount()).isEqualTo(3);
 
         List<PlayerArtifact> owned = artifacts();
         assertThat(owned).hasSize(1);                              // 같은 코드는 한 줄

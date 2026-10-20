@@ -4,10 +4,13 @@ import com.swordmaster.common.BusinessException;
 import com.swordmaster.currency.CurrencyReason;
 import com.swordmaster.currency.dto.CurrenciesResponse;
 import com.swordmaster.currency.service.CurrencyService;
+import com.swordmaster.equipment.artifact.dto.ArtifactResponse;
+import com.swordmaster.equipment.artifact.service.ArtifactService;
 import com.swordmaster.idempotency.service.IdempotencyService;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.service.PlayerService;
 import com.swordmaster.reward.Reward;
+import com.swordmaster.reward.RewardType;
 import com.swordmaster.reward.service.RewardService;
 import com.swordmaster.shop.ShopErrorCode;
 import com.swordmaster.shop.dto.ShopPurchaseRequest;
@@ -22,7 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -34,6 +39,7 @@ public class ShopService {
     private final PlayerService playerService;
     private final RewardService rewardService;
     private final IdempotencyService idempotencyService;
+    private final ArtifactService artifactService;
 
     @Transactional
     public ShopPurchaseResponse purchase(Long userId, ShopPurchaseRequest request) {
@@ -74,11 +80,27 @@ public class ShopService {
         //5.구매를 위한 다른 작업들이 전부 처리되었다면 구매기록을 저장하고 응답을 반환
         CurrenciesResponse currencies = currencyService.getAll(player);
 
-        ShopPurchaseResponse response = new ShopPurchaseResponse(granted, currencies);
+        List<ArtifactResponse> changedArtifacts = findChangedArtifacts(player, granted);
+
+        ShopPurchaseResponse response = new ShopPurchaseResponse(granted, currencies, changedArtifacts);
 
         shopPurchaseLogRepository.save(new ShopPurchaseLog(userId, requestId, product, rewards, response));
 
         return response;
+    }
+
+    // 지급한 보상 중 아티팩트의 지급 후 상태. 클라이언트가 보유 목록에 바로 반영할 수 있게 응답에 담는다
+    private List<ArtifactResponse> findChangedArtifacts(Player player, List<Reward> granted) {
+        Set<String> codes = granted.stream()
+                .filter(reward -> reward.rewardType() == RewardType.ARTIFACT)
+                .map(Reward::rewardCode)
+                .collect(Collectors.toSet());
+
+        if (codes.isEmpty()) return List.of();
+
+        return artifactService.getAll(player).stream()
+                .filter(artifact -> codes.contains(artifact.code()))
+                .toList();
     }
 
 }

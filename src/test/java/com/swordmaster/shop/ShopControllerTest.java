@@ -97,7 +97,7 @@ class ShopControllerTest {
     @Test
     void 성공하면_200과_rewards_currencies를_응답한다() throws Exception {
         when(shopFacade.purchase(eq(USER_ID), any())).thenReturn(new ShopPurchaseResponse(
-                List.of(new Reward(RewardType.GOLD, null, 100)), new CurrenciesResponse(100L, 0L)));
+                List.of(new Reward(RewardType.GOLD, null, 100)), new CurrenciesResponse(100L, 0L), List.of()));
 
         mockMvc.perform(post("/api/shop/purchase").contentType(MediaType.APPLICATION_JSON).content(body("GOLD_GACHA_1")))
                 .andExpect(status().isOk())
