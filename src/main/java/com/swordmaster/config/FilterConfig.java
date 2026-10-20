@@ -36,7 +36,7 @@ public class FilterConfig {
                         // HTTP 연결을 허용하고 STOMP CONNECT에서 JWT 인증
                         .requestMatchers("/ws").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(errors -> errors
