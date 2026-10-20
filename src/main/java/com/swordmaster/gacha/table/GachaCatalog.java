@@ -33,34 +33,20 @@ public class GachaCatalog {
 
             // 교차 검증: ARTIFACT 행만 대상
             for (GachaEntry entry : list) {
-                //아티팩트 타입이 아닌 경우 for 문 탈출
+                // 아티팩트 타입이 아니면 다음 행으로 (교차 검증 대상 아님)
                 if (entry.rewardType() != RewardType.ARTIFACT) continue;
 
                 // 등급 랜덤(rewardType이 아티팩트이나 rewardCode가 없는 경우)인가?
-                // 아티팩트 시트 데이터에 해당 등급의 아티팩트가 0개 이상 있는가? -> for 문 탈출
+                // 아티팩트 시트에 해당 등급의 아티팩트가 1개 이상 있어야 함 → 확인 후 다음 행으로
                 if (entry.isRandomArtifact()) {
                     if (codesByGrade.getOrDefault(entry.equipmentGrade(), List.of()).isEmpty())
                         errors.add(gachaCode + ": " + entry.equipmentGrade() + " 등급 아티팩트가 없습니다.");
                     continue;
                 }
 
-                // 아티팩트 시트에 해당 코드의 데이터가 존재하는 지 확인용도로 데이터를 가져옴
-                Optional<Artifact> artifact = artifacts.findByCode(entry.rewardCode());
-
-                //데이터가 null 이라면 에러
-                if (artifact.isEmpty()) {
+                //아티팩트의 등급은 검사하지 않고 아티팩트의 시트에 있는 코드인지만 검사
+                if (!artifacts.existsByCode(entry.rewardCode()))
                     errors.add(gachaCode + ": Artifact에 없는 코드 " + entry.rewardCode());
-                    continue;
-                }
-
-
-                EquipmentGrade written = entry.equipmentGrade();
-                EquipmentGrade actual  = artifact.get().grade();
-
-                // grade 가 실제 데이터와 다르다면 에러
-                if (written != null && written != actual)
-                    errors.add(gachaCode + ": " + entry.rewardCode() + "의 실제 등급은 "
-                            + actual + "인데 grade가 " + written + "입니다.");
             }
 
             // 누적 가중치 계산 (같은 gachacode의 pool 내의 weight 합계가 long 범위를 넘으면 에러)

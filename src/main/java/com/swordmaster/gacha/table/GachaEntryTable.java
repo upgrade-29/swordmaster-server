@@ -32,7 +32,7 @@ public class GachaEntryTable extends SheetTable<GachaEntry> {
         // 같은 가챠 안에 같은 보상이 두 줄 있으면 확률 공개 시 혼란 → 금지 (NONE과 빈칸은 같은 값)
         checkUnique("gachaCode+rewardType+rewardCode+grade+amount",
                 e -> e.gachaCode() + "|" + e.rewardType() + "|" + e.rewardCode()
-                        + "|" + e.equipmentGrade() + "|" + e.amount(),
+                        + "|" + (e.isRandomArtifact() ? e.equipmentGrade() : "-") + "|" + e.amount(),
                 errors);
 
         for (int i = 0; i < rows.size(); i++) {
@@ -71,9 +71,11 @@ public class GachaEntryTable extends SheetTable<GachaEntry> {
                 // 재화형(GOLD, DIAMOND)은 rewardCode 없음
                 if (!noCode) errors.add(at + entry.rewardType() + "는 rewardCode를 비워야 합니다.");
             } else if (entry.rewardType() == RewardType.ARTIFACT) {
-                // ARTIFACT는 rewardCode(지정) 또는 grade(랜덤) 중 최소 하나
-                // 둘 다 있으면 지정 지급 + 등급 일치 검사 (artifact 시트가 필요하므로 GachaCatalog에서 수행)
+                // ARTIFACT는 rewardCode(지정) 또는 grade(랜덤) 중 최소 하나, 둘 다 있으면 지정 지급이며 grade는 무시
                 if (noCode && !hasGrade) errors.add(at + "ARTIFACT는 rewardCode 또는 grade가 필요합니다.");
+                // 등급 랜덤 방식의 행의 amount 는 1로 제한 (amount 만큼 결과값이 늘어나므로)
+                if (noCode && hasGrade && entry.amount() != 1)
+                    errors.add(at + "등급 랜덤 행의 amount는 1이어야 합니다. (횟수는 상품 보상 amount로 지정)");
             } else if (noCode) {
                 // 나머지는 rewardCode 필수
                 errors.add(at + entry.rewardType() + "는 rewardCode가 필요합니다.");
