@@ -153,7 +153,7 @@ class ShopPurchaseIntegrationTest {
 
     @Test
     void 다이아가_부족하면_NOT_ENOUGH_DIAMOND이고_보상과_기록이_없다() {
-        product(new ShopProduct("GOLD_SMALL", "골드 주머니", "GOLD", "ICON", CurrencyType.DIAMOND, 100),
+        product(new ShopProduct("GOLD_SMALL", "골드 주머니", "GOLD", "ICON", PriceType.DIAMOND, 100),
                 new Reward(RewardType.GOLD, null, 10_000));
 
         assertThatThrownBy(() -> shopService.purchase(userId, request("GOLD_SMALL")))
@@ -174,7 +174,7 @@ class ShopPurchaseIntegrationTest {
     void 가챠_개봉이_실패하면_앞서_지급한_골드와_다이아_차감까지_모두_롤백된다() {
         giveDiamond(1000);
         // 1번 보상(골드)은 성공, 2번 보상(가챠)은 시트에 없는 코드라 실패
-        product(new ShopProduct("BROKEN", "깨진 상품", "GACHA", "ICON", CurrencyType.DIAMOND, 100),
+        product(new ShopProduct("BROKEN", "깨진 상품", "GACHA", "ICON", PriceType.DIAMOND, 100),
                 new Reward(RewardType.GOLD, null, 10_000),
                 new Reward(RewardType.GACHA_BOX, "NO_SUCH_BOX", 1));
         when(gachaCatalog.findPool("NO_SUCH_BOX")).thenReturn(Optional.empty());
@@ -192,7 +192,7 @@ class ShopPurchaseIntegrationTest {
     @Test
     void 아티팩트_지급이_실패해도_전체_롤백된다() {
         giveDiamond(1000);
-        product(new ShopProduct("BROKEN_ART", "깨진 아티팩트", "GACHA", "ICON", CurrencyType.DIAMOND, 100),
+        product(new ShopProduct("BROKEN_ART", "깨진 아티팩트", "GACHA", "ICON", PriceType.DIAMOND, 100),
                 new Reward(RewardType.GOLD, null, 10_000),
                 new Reward(RewardType.ARTIFACT, "ART_GHOST", 1));
         when(artifactTable.existsByCode("ART_GHOST")).thenReturn(false);
@@ -213,7 +213,7 @@ class ShopPurchaseIntegrationTest {
         giveDiamond(1000);
         // 결과가 하나뿐인 풀 → 항상 골드 100이 나와 결과가 고정된다
         gachaPool("GOLD_BOX", new GachaEntry("GOLD_BOX", RewardType.GOLD, null, 100, 1));
-        product(new ShopProduct("GOLD_GACHA_10", "골드 상자 10회", "GACHA", "ICON", CurrencyType.DIAMOND, 1000),
+        product(new ShopProduct("GOLD_GACHA_10", "골드 상자 10회", "GACHA", "ICON", PriceType.DIAMOND, 1000),
                 new Reward(RewardType.GACHA_BOX, "GOLD_BOX", 10));
 
         ShopPurchaseResponse response = shopService.purchase(userId, request("GOLD_GACHA_10"));
@@ -242,7 +242,7 @@ class ShopPurchaseIntegrationTest {
         when(artifactTable.getAll()).thenReturn(List.of(art));
         when(artifactTable.existsByCode("ART_A")).thenReturn(true);
         gachaPool("ART_BOX", new GachaEntry("ART_BOX", RewardType.ARTIFACT, "ART_A", 1, 1));
-        product(new ShopProduct("ART_GACHA_3", "아티팩트 상자 3회", "GACHA", "ICON", CurrencyType.DIAMOND, 100),
+        product(new ShopProduct("ART_GACHA_3", "아티팩트 상자 3회", "GACHA", "ICON", PriceType.DIAMOND, 100),
                 new Reward(RewardType.GACHA_BOX, "ART_BOX", 3));
 
         ShopPurchaseResponse response = shopService.purchase(userId, request("ART_GACHA_3"));
@@ -254,6 +254,17 @@ class ShopPurchaseIntegrationTest {
         assertThat(owned).hasSize(1);                              // 같은 코드는 한 줄
         assertThat(owned.getFirst().getMaterialCount()).isEqualTo(3); // 처음 얻어도 재료 1 → 총 3
         assertThat(currencies().diamond()).isEqualTo(900);
+    }
+
+    @Test
+    void FREE_상품은_재화를_차감하지_않고_보상만_지급한다() {
+        product(new ShopProduct("DIAMOND_SMALL", "다이아 주머니", "DIAMOND", "ICON", PriceType.FREE, 0),
+                new Reward(RewardType.DIAMOND, null, 100));
+
+        ShopPurchaseResponse response = shopService.purchase(userId, request("DIAMOND_SMALL"));
+
+        assertThat(response.rewards()).containsExactly(new Reward(RewardType.DIAMOND, null, 100));
+        assertThat(currencies().diamond()).isEqualTo(100);   // 시작 0, 차감 없이 +100
     }
 
     // ===================== 도우미 =====================
