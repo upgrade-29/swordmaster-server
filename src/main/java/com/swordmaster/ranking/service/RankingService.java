@@ -13,13 +13,16 @@ import com.swordmaster.ranking.dto.RankingEntryResponse;
 import com.swordmaster.ranking.dto.RankingResponse;
 import com.swordmaster.ranking.redis.RankingRecordedEvent;
 import com.swordmaster.ranking.redis.RankingRedisStore;
+import com.swordmaster.ranking.redis.RankingSnapshotJob;
 import com.swordmaster.ranking.repository.RankingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,10 @@ public class RankingService {
 
     private static final int RANKING_LIMIT = 100;
 
+    // 다음 집계 시각 계산용 (집계 스케줄러와 같은 cron, 시간대 사용)
+    private static final CronExpression SNAPSHOT_CRON = CronExpression.parse(RankingSnapshotJob.SNAPSHOT_CRON);
+    private static final ZoneId         SNAPSHOT_ZONE = ZoneId.of(RankingSnapshotJob.SNAPSHOT_ZONE);
+
     // 조회
     @Transactional(readOnly = true)
     public RankingResponse getRanking(Long userId, RankingType type) {
@@ -49,11 +56,16 @@ public class RankingService {
         // 집계본에 현재 내 기록이 없고, 내 기록이 꼴찌일 경우에 인원수를 맞춤 (+ 1)
         long total = Math.max(rankingRedisStore.count(type), me.rank());
 
+        Instant now          = Instant.now();
+        Instant nextUpdateAt = SNAPSHOT_CRON.next(now.atZone(SNAPSHOT_ZONE)).toInstant();
+
         return new RankingResponse(
                 getTop(type),                           // 상위 N명 (집계본 기준)
                 me,                                     // 내 랭킹 (실시간 기준)
                 total,                                  // 총 인원 수 (클라이언트에서 내 랭킹(순위)의 백분율 계산용)
-                rankingRedisStore.findUpdatedAt(type)   // 상위 목록 집계 시각
+                rankingRedisStore.findUpdatedAt(type),  // 상위 목록 집계 시각
+                nextUpdateAt,                           // 다음 집계 시각
+                now                                     // 서버 현재 시각
         );
     }
 
