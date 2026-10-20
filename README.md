@@ -41,7 +41,136 @@ https://github.com/upgrade-29/swordmaster-client
   <summary>유지보수 및 배포</summary>
   <div markdown="1">
 
-여기에 숨겨둘 텍스트, 이미지, 코드 등을 작성합니다.(첫줄을 남겨놓아야 줄바꿈이 가능함 <- 이유는 모름)
+### 접속 주소
+
+| 용도 | 주소 |
+| --- | --- |
+| REST API | `https://api.upgrade-29.com` |
+| WebSocket (STOMP) | `wss://api.upgrade-29.com/ws` |
+| 헬스체크 | `https://api.upgrade-29.com/actuator/health/readiness` |
+
+- 도메인: 가비아 `upgrade-29.com`, `api` → ALB CNAME / 인증서: ACM `api.upgrade-29.com` (DNS 검증, 자동 갱신)
+- ALB 기본 주소(`….elb.amazonaws.com`)로는 HTTPS 불가 (인증서 이름 불일치) → 항상 도메인 사용
+- HTTP(80)는 클라이언트 전환 완료 전까지 임시 허용, 전환 후 차단 예정 (`ws://`는 리다이렉트를 따라가지 못함)
+- 가비아의 **ACM 검증용 CNAME은 삭제 금지** (인증서 자동 갱신에 필요)
+
+### 인프라 구조
+
+```
+사용자 ─443/80─▶ ALB(퍼블릭) ─8080─▶ EC2(프라이빗, ASG) ─3306─▶ RDS
+                                                     └─6379─▶ ElastiCache
+EC2 ──▶ NAT ──▶ ECR / SSM Parameter Store / Google Sheets
+```
+
+| 구성 | 내용 |
+| --- | --- |
+| 서버 | EC2 Auto Scaling Group(`swordmaster-asg`) + ALB, 시작 템플릿 user-data로 컨테이너 실행 |
+| 이미지 | Docker `linux/arm64` → Amazon ECR, 태그 `vYYYYMMDD-HHmm-커밋7자리` (최근 10개 보관) |
+| DB / 캐시 | RDS(MySQL 8, 단일 AZ), ElastiCache(Valkey, SSL) |
+| 스키마 | Flyway 마이그레이션 + Hibernate `validate` |
+| 설정·비밀값 | SSM Parameter Store `/swordmaster/prod/*` |
+| 로그 | CloudWatch Logs `/swordmaster/prod/app` (스트림 = 인스턴스 ID), 초기화 로그 `/var/log/swordmaster-init.log` |
+
+| 보안 그룹 | 인바운드 |
+| --- | --- |
+| `alb-sg` | 80, 443 ← 전체 |
+| `app-sg` | 8080 ← `alb-sg` (22번 없음) |
+| `rds-sg` | 3306 ← `app-sg`, `bastion-sg` |
+| `valkey-sg` | 6379 ← `app-sg`, `bastion-sg` |
+
+- RDS·ElastiCache는 프라이빗 → 로컬 PC에서 직접 접속 불가 (의도한 설계)
+- 앱 서버 접속은 SSM Session Manager (키·22번 불필요)
+
+### CI/CD
+
+```mermaid
+flowchart LR
+    A[deploy-test / main push] --> B[bootJar 빌드]
+    B --> C[GitHub OIDC로 AWS 로그인]
+    C --> D[arm64 이미지 → ECR]
+    D --> E[SSM IMAGE_TAG 갱신]
+    E --> F[ASG Instance Refresh]
+    F --> G[새 인스턴스 user-data<br/>Parameter Store → docker run]
+    G --> H[Spring 기동<br/>Flyway → 시트 로드·검증]
+    H --> I{ALB readiness}
+    I -- healthy --> J[기존 인스턴스 교체]
+    I -- unhealthy --> K[새 인스턴스 종료, 기존 유지]
+```
+
+- 새 인스턴스가 healthy가 되기 전까지 기존 인스턴스 유지 (`MinHealthyPercentage 100`, 워밍업 180초)
+- **CI 성공 = 교체 요청 접수.** 실제 결과는 ASG *인스턴스 새로 고침*·*활동* 탭과 CloudWatch 로그로 확인
+- 새 인스턴스는 부팅 시 `IMAGE_TAG`를 읽으므로, CI의 refresh 단계만 실패해도 이후 뜨는 인스턴스는 최신 이미지 사용
+- Instance Refresh는 **한 번에 하나** → 진행 중이면 `InstanceRefreshInProgress`. 진행 중 refresh 완료/취소(`Cancelled` 확인) 후 재시작
+
+### 운영 환경변수 (Parameter Store `/swordmaster/prod/`)
+
+| 이름 | 용도 |
+| --- | --- |
+| `IMAGE_TAG` | 배포 이미지 태그 (CI가 갱신) |
+| `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD` | RDS 접속 |
+| `REDIS_HOST` | ElastiCache 접속 |
+| `JWT_SECRET` | JWT 서명 (교체 시 기존 토큰 모두 무효 → 재로그인) |
+| `GOOGLE_WEB_CLIENT_ID` | 구글 로그인 토큰 검증 |
+
+**환경변수 추가 절차** (하나라도 빠지면 부팅 실패)
+
+1. Parameter Store에 `/swordmaster/prod/KEY` 생성 — 값은 **실제 값** (`${KEY}` 입력 금지)
+2. 시작 템플릿 새 버전: user-data에 `KEY=$(retry getp KEY)` + `-e KEY="$KEY" \` 추가 → **기본 버전 지정** (ASG는 `Default` 사용)
+3. `application-prod.properties`에 `KEY=${KEY}` 추가
+4. 배포 후 새 인스턴스 태그 `aws:ec2launchtemplate:version`이 새 버전인지 확인
+
+> user-data는 `set -euo pipefail` → 파라미터 하나라도 못 읽으면 컨테이너 실행 전에 중단
+
+### 헬스체크
+
+| 항목 | 값 |
+| --- | --- |
+| ALB 대상 그룹 경로 | `/actuator/health/readiness` |
+| Security 허용 | `FilterConfig`의 `GET /actuator/health/**` permitAll |
+| ASG 헬스체크 | ELB 기준, 유예 180초 |
+| 등록 해제 지연 | 30초 |
+
+- `/actuator/health`(DB·Redis 포함) 대신 readiness를 쓰는 이유: DB·Redis 일시 장애 시 **멀쩡한 서버까지 교체가 반복**되는 연쇄 장애 방지. 외부 의존성 장애는 5xx 알람으로 감지
+- 경로 변경 순서: ① 새 경로 허용 코드 배포 → ② 새 경로 200 직접 확인 → ③ 대상 그룹 경로 변경 (순서가 바뀌면 401 → 전 서버 Unhealthy → 교체 반복)
+
+### 모니터링·알림
+
+| 알람 | 조건 | 의미 |
+| --- | --- | --- |
+| `swordmaster-no-healthy-host` | Healthy 대상 0대, 2분 | 서비스 중단 |
+| `swordmaster-target-5xx` | 앱 5xx 5분간 5건 이상 | 앱 에러 (DB·Redis 장애 포함) |
+| `swordmaster-rds-low-storage` | RDS 남은 공간 2GB 미만 | 디스크 부족 임박 |
+
+- 모두 SNS `swordmaster-alerts` → 이메일 (경보·복구 둘 다)
+- 로그 검색어: `ERROR`, `Exception`, `APPLICATION FAILED`, `Started`, `Migrating`
+
+### 운영 규칙
+
+- **마이그레이션 파일명** `VyyyyMMdd_HHmm__설명.sql` (작성 시점). 병합 시 develop 최신 버전보다 작으면 운영 Flyway validate 실패 → 파일명 재조정
+- **시트 컬럼·값 변경 순서: 코드 배포 → 시트 변경.** 서버는 부팅 시 시트를 엄격 검증하므로 코드가 모르는 열·값이 있으면 기동 중단
+- **Parameter Store·시트는 부팅 시 한 번만 읽음** → 값만 바꾸면 실행 중 서버에 미반영, 아래 재배포 필요
+- **마이그레이션이 포함된 배포는 이미지 롤백 금지** → 수정 커밋으로 재배포
+
+### DB 접근·데이터 보호
+
+| 항목 | 내용 |
+| --- | --- |
+| 삭제 방지 | 켜짐 |
+| 자동 백업 | 1일 (프리 플랜 상한) |
+| 수동 스냅샷 | 위험 작업 직전 `before-작업-날짜` (컬럼·테이블 삭제 마이그레이션 배포 전 필수) |
+| 접근 방법 | 바스티온 SSH 터널(`127.0.0.1:3307`) 또는 SSM 포트 포워딩 |
+| 팀원 계정 | 조회 전용 계정 별도 발급 (`GRANT SELECT ON swordmaster.*`) |
+
+**배포 실패 시 확인 순서:** ASG 활동 탭 → 새 인스턴스 태그(템플릿 버전) → CloudWatch 해당 인스턴스 스트림 → (스트림 없으면) Session Manager로 `/var/log/swordmaster-init.log`
+
+### 현재 제약
+
+| 제약 | 이유 | 대응 |
+| --- | --- | --- |
+| 서버 1대 고정 (스케일링 정책 비활성) | STOMP `SimpleBroker`가 서버 메모리 → 2대면 채팅이 갈림 | 외부 브로커(Redis Pub/Sub 등) 적용 후 재활성화 |
+| 배포 중 WebSocket 끊김 | 인스턴스 교체 (드레이닝 30초) | 클라이언트 자동 재연결 |
+| RDS 단일 AZ | 비용 | 출시 시 Multi-AZ 검토 |
+| `deploy-test`·`main`이 같은 ASG에 배포 | 임시 운영 | main 배포 안정화 후 deploy-test 트리거 제거 |
   </div>
 </details>
 
