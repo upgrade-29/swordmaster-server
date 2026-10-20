@@ -1,7 +1,6 @@
 package com.swordmaster.shop;
 
 
-import com.swordmaster.ranking.service.RankingService;
 import com.swordmaster.common.BusinessException;
 import com.swordmaster.common.table.constant.ConstantTable;
 import com.swordmaster.currency.CurrencyReason;
@@ -22,10 +21,12 @@ import com.swordmaster.gacha.service.GachaService;
 import com.swordmaster.gacha.table.GachaCatalog;
 import com.swordmaster.gacha.table.GachaEntry;
 import com.swordmaster.gacha.table.GachaEntryTable;
+import com.swordmaster.gacha.table.GachaGrade;
 import com.swordmaster.idempotency.service.IdempotencyService;
 import com.swordmaster.player.entity.Player;
 import com.swordmaster.player.repository.PlayerRepository;
 import com.swordmaster.player.service.PlayerService;
+import com.swordmaster.ranking.service.RankingService;
 import com.swordmaster.reward.Reward;
 import com.swordmaster.reward.RewardType;
 import com.swordmaster.reward.service.RewardService;
@@ -212,7 +213,7 @@ class ShopPurchaseIntegrationTest {
     void 골드_상자_10회를_사면_골드_10건이_지급되고_기록된다() {
         giveDiamond(1000);
         // 결과가 하나뿐인 풀 → 항상 골드 100이 나와 결과가 고정된다
-        gachaPool("GOLD_BOX", new GachaEntry("GOLD_BOX", RewardType.GOLD, null, 100, 1));
+        gachaPool("GOLD_BOX", new GachaEntry("GOLD_BOX", RewardType.GOLD, null, GachaGrade.NONE, 100, 1));
         product(new ShopProduct("GOLD_GACHA_10", "골드 상자 10회", "GACHA", "ICON", PriceType.DIAMOND, 1000),
                 new Reward(RewardType.GACHA_BOX, "GOLD_BOX", 10));
 
@@ -241,7 +242,7 @@ class ShopPurchaseIntegrationTest {
         Artifact art = new Artifact("ART_A", "A", EquipmentGrade.COMMON);
         when(artifactTable.getAll()).thenReturn(List.of(art));
         when(artifactTable.existsByCode("ART_A")).thenReturn(true);
-        gachaPool("ART_BOX", new GachaEntry("ART_BOX", RewardType.ARTIFACT, "ART_A", 1, 1));
+        gachaPool("ART_BOX", new GachaEntry("ART_BOX", RewardType.ARTIFACT, "ART_A", GachaGrade.NONE, 1, 1));
         product(new ShopProduct("ART_GACHA_3", "아티팩트 상자 3회", "GACHA", "ICON", PriceType.DIAMOND, 100),
                 new Reward(RewardType.GACHA_BOX, "ART_BOX", 3));
 
