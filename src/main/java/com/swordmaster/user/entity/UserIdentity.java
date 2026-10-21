@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -56,6 +58,19 @@ public class UserIdentity {
         identity.providerUserId = loginEmail;
         identity.passwordHash = passwordHash;
         identity.email = loginEmail;
+        return identity;
+    }
+
+    public static UserIdentity createGuest(
+            User user,
+            String email
+    ) {
+        UserIdentity identity = new UserIdentity();
+        identity.user = user;
+        identity.provider = LoginProvider.GUEST;
+        identity.providerUserId = UUID.randomUUID().toString();//게스트용 임시값
+        identity.passwordHash = null;
+        identity.email = email;
         return identity;
     }
 

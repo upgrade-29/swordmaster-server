@@ -41,7 +41,7 @@ public class UserService {
                     HttpStatus.CONFLICT, "이미 계정을 생성한 이메일입니다.");
         }
 
-        String encodedPassword = //유출 방지(불필요하지만 멋졌죠?)
+        String encodedPassword = //비밀번호 암호화
                 passwordEncoder.encode(request.getPassword());
 
         User user = new User(
@@ -68,6 +68,21 @@ public class UserService {
             throw new BusinessException(
                     HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
+
+        return issueTokens(user);
+    }
+
+    @Transactional
+    public LoginResponse guestlogin() {
+        User user = new User(null,"GuestLogin");
+
+        UserIdentity identity = UserIdentity.createGuest(
+                user,
+                null
+        );
+
+        userRepository.save(user);
+        userIdentityRepository.saveAndFlush(identity);
 
         return issueTokens(user);
     }
@@ -124,5 +139,10 @@ public class UserService {
                 user.getId(),
                 user.getEmail()
         );
+    }
+
+    @Transactional
+    public void registerGuest(User user) {
+
     }
 }

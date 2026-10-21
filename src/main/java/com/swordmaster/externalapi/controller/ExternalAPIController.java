@@ -20,13 +20,11 @@ public class ExternalAPIController {
 //    private String googleGamesGetApi = "https://games.googleapis.com/games/v1/players/me";
 
     //TODO 이후에 모든 로그인 방법을 추가한다 (kako, naver, ...)
-    @PostMapping("/google")
+    @PostMapping("/login/google")
     public ResponseEntity<LoginResponse> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request
     ) {
-        return ResponseEntity.ok(
-                externalAPIService.googleLogin(request)
-        );
+        return ResponseEntity.ok(externalAPIService.googleLogin(request));
     }
 
 //    @PostMapping("/googleGames")
