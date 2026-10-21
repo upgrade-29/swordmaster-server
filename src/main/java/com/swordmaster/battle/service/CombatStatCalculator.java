@@ -12,7 +12,7 @@ import java.util.Comparator;
 import java.util.List;
 
 // 플레이어 전투 스탯 (클라 StatCalculator.CalculatePlayer)
-// 검 능력치에 장착한 아티팩트의 능력치를 더함, 클라는 서버가 내려준 값을 그대로 쓰므로 서버 계산이 기준
+// 검 능력치에 장착한 아티팩트의 능력치를 더함, 공격 속도만 검 공격 속도에 대한 비율, 클라는 서버가 내려준 값을 그대로 쓰므로 서버 계산이 기준
 @Component
 public class CombatStatCalculator {
     private final SwordTable        swordTable;
@@ -28,11 +28,11 @@ public class CombatStatCalculator {
         Sword sword = swordTable.findByLevel(swordLevel)
                 .orElseThrow(() -> new IllegalStateException("검의 정보가 없습니다: level " + swordLevel));
 
-        double attack      = sword.attackPower();
-        double attackSpeed = sword.attackSpeed();
-        double maxHp       = sword.maxHp();
-        double critRate    = 0;
-        double lifesteal   = 0;
+        double attack          = sword.attackPower();
+        double attackSpeedRate = 0;
+        double maxHp           = sword.maxHp();
+        double critRate        = 0;
+        double lifesteal       = 0;
 
         // 슬롯 순서로 더함 (더하는 순서가 바뀌면 double 결과가 미세하게 달라질 수 있음)
         List<ArtifactResponse> equipped = artifacts.stream()
@@ -50,14 +50,15 @@ public class CombatStatCalculator {
                 double value = getArtifactValue(stat, equippedArtifact.level());
 
                 switch (stat.statType()) {
-                    case ATTACK_SPEED -> attackSpeed += value;
-                    case MAX_HP       -> maxHp       += value;
-                    case CRIT_RATE    -> critRate    += value;
-                    case LIFESTEAL    -> lifesteal   += value;
+                    case ATTACK_SPEED -> attackSpeedRate += value;
+                    case MAX_HP       -> maxHp           += value;
+                    case CRIT_RATE    -> critRate        += value;
+                    case LIFESTEAL    -> lifesteal       += value;
                 }
             }
         }
 
+        double attackSpeed = sword.attackSpeed() * (1 + attackSpeedRate);
         return new CombatStat(attack, attackSpeed, Math.floor(maxHp), critRate, lifesteal);
     }
 

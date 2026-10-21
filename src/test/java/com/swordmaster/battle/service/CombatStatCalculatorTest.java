@@ -63,7 +63,7 @@ class CombatStatCalculatorTest {
         CombatStat stat = calculator().calculate(3, artifacts);
 
         assertEquals(245,          stat.attack());
-        assertEquals(1.2 + 0.25,   stat.attackSpeed());
+        assertEquals(1.2 * (1 + 0.25), stat.attackSpeed()); // 검 공격 속도에 대한 비율
         assertEquals(3310,         stat.maxHp());          // floor(3200 + 110.5)
         assertEquals(0.1,          stat.critRate());
         assertEquals(0,            stat.lifesteal());
