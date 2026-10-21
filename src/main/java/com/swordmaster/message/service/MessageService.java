@@ -86,6 +86,19 @@ public class MessageService {
         messagingTemplate.convertAndSend("/topic/notices", message);
     }
 
+    public void sendBrokeNotice(Long userId, String nickname, int level) {
+        MessageResponse message = new MessageResponse(
+                MessageType.SWORD_ENHANCEMENT,
+                userId,
+                nickname,
+                nickname + "님이 검 " + level + "강 → "  + (level + 1) + "강 강화에 실패하여 검이 파괴되었습니다.",
+                level,
+                Instant.now()
+        );
+
+        messagingTemplate.convertAndSend("/topic/notices", message);
+    }
+
     // 호출하는 서비스에서 친구 관계·차단 여부와 발신자 정보를 검증해야 한다. TODO: 친구 추가 기능 생성 시 활용
     public void deliverPrivateMessage(Long senderId, String senderNickname,
                                       Long receiverId, String content) {
