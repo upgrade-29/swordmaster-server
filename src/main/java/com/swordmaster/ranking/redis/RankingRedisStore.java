@@ -202,7 +202,7 @@ public class RankingRedisStore {
     }
 
     // Key 생성 (랭킹 종류(type -> key) 마다 Sorted Set 생성)
-    private String key(RankingType type)          { return "ranking:" + type.name(); }
+    private String key(RankingType type)          { return "ranking:{" + type.name() + "}"; }
     private String snapshotKey(RankingType type)  { return key(type) + ":snapshot"; }
     private String updatedAtKey(RankingType type) { return snapshotKey(type) + ":updated-at"; }
 
