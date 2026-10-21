@@ -3,7 +3,7 @@ name: Deploy (prod)
 
 on:
   push:
-    branches: [deploy-test,main]
+    branches: [main]
   workflow_dispatch:
 
 # ② 권한과 동시 실행 제어
