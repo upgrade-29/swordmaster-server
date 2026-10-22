@@ -35,7 +35,7 @@ https://github.com/upgrade-29/swordmaster-client
 
 ## 주요 기능
 <details>
-  <summary>유지보수 및 배포</summary>
+  <summary>김관영 - 유지보수 및 배포</summary>
   <div markdown="1">
 
 ### 접속 주소
@@ -172,7 +172,7 @@ flowchart LR
 </details>
 
 <details>
-  <summary>상점 구매 기능</summary>
+  <summary>김관영 -상점 구매 기능</summary>
   <div markdown="1">
 
 ### 담당 기능
@@ -324,7 +324,7 @@ erDiagram
 </details>
 
 <details>
-  <summary>인증과 인가</summary>
+  <summary>이훈 - 인증과 인가</summary>
   <div markdown="1">
     
 ### 구현 개요
@@ -533,10 +533,10 @@ erDiagram
 </details>
 
 <details>
-  <summary>전투 및 보상</summary>
+  <summary>오수호 - 전투 및 보상</summary>
   <div markdown="1">
 
-  여기에 숨겨둘 텍스트, 이미지, 코드 등을 작성합니다.(첫줄을 남겨놓아야 줄바꿈이 가능함 <- 이유는 모름)
+  [내용]
 
   </div>
 </details>
