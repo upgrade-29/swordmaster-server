@@ -19,8 +19,9 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    //TODO : email == login id 이후에 변경가능
-    @Column(unique = true, nullable = false, length = 254)
+    //게스트 로그인을 위해서 nullable 제거, 하지만 dto에서 notblank를 통해서 빈값을 받기를 방지한다.
+    //기존 user에서 하던 작업들이 useridentity로 이동하여서 email의 unique와 nullable조건을 제거.
+    @Column(length = 254)
     private String email;
 
     @Column(nullable = false)

@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -15,6 +17,10 @@ import lombok.NoArgsConstructor;
                 @UniqueConstraint(
                         name = "uk_identity_provider_subject",
                         columnNames = {"provider", "provider_user_id"}
+                ),
+                @UniqueConstraint(
+                        name = "uk_identity_user_provider",
+                        columnNames = {"user_id", "provider"}
                 )
         }
 )
@@ -56,6 +62,42 @@ public class UserIdentity {
         identity.providerUserId = loginEmail;
         identity.passwordHash = passwordHash;
         identity.email = loginEmail;
+        return identity;
+    }
+
+    public static UserIdentity createGuest(
+            User user,
+            String email
+    ) {
+        UserIdentity identity = new UserIdentity();
+        identity.user = user;
+        identity.provider = LoginProvider.GUEST;
+        identity.providerUserId = UUID.randomUUID().toString();//게스트용 임시값
+        identity.passwordHash = null;
+        identity.email = email;
+        return identity;
+    }
+
+    public static UserIdentity createSocial(
+            User user,
+            LoginProvider provider,
+            String providerUserId,
+            String email
+    ) {
+        if (provider != LoginProvider.GOOGLE
+                && provider != LoginProvider.KAKAO
+                && provider != LoginProvider.NAVER) {
+            throw new IllegalArgumentException(
+                    "지원하지 않는 소셜 로그인 제공자입니다."
+            );
+        }
+
+        UserIdentity identity = new UserIdentity();
+        identity.user = user;
+        identity.provider = provider;
+        identity.providerUserId = providerUserId;
+        identity.passwordHash = null;
+        identity.email = email;
         return identity;
     }
 

@@ -4,5 +4,6 @@ public enum LoginProvider {
     LOCAL,
     GOOGLE,
     KAKAO,
-    NAVER
+    NAVER,
+    GUEST
 }

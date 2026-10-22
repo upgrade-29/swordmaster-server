@@ -4,6 +4,10 @@ import com.swordmaster.common.BusinessException;
 import com.swordmaster.common.enums.LoginProvider;
 import com.swordmaster.jwt.JwtProvider;
 import com.swordmaster.jwt.service.RefreshTokenService;
+import com.swordmaster.player.dto.PlayerCreateRequest;
+import com.swordmaster.player.repository.PlayerRepository;
+import com.swordmaster.player.service.PlayerFacade;
+import com.swordmaster.user.dto.IdentityLinkResponse;
 import com.swordmaster.user.dto.LoginRequest;
 import com.swordmaster.user.dto.LoginResponse;
 import com.swordmaster.user.dto.SignupRequest;
@@ -19,6 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -27,6 +33,12 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final RefreshTokenService refreshTokenService;
+    private final PlayerFacade playerFacade;
+    private final PlayerRepository playerRepository;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String NICKNAME_CHARACTERS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
     @Transactional
     public void signup(@Valid SignupRequest request) {
@@ -41,7 +53,7 @@ public class UserService {
                     HttpStatus.CONFLICT, "이미 계정을 생성한 이메일입니다.");
         }
 
-        String encodedPassword = //유출 방지(불필요하지만 멋졌죠?)
+        String encodedPassword = //비밀번호 암호화
                 passwordEncoder.encode(request.getPassword());
 
         User user = new User(
@@ -70,6 +82,46 @@ public class UserService {
         }
 
         return issueTokens(user);
+    }
+
+    @Transactional
+    public LoginResponse guestlogin() {
+        User user = userRepository.save(
+                new User(null, "GuestLogin")
+        );
+
+        UserIdentity identity = UserIdentity.createGuest(user, null);
+        userIdentityRepository.saveAndFlush(identity);
+
+        String nickname = createGuestNickname();
+        playerFacade.create(
+                user.getId(),
+                new PlayerCreateRequest(nickname)
+        );
+
+        return issueTokens(user);
+    }
+
+    private String createGuestNickname() {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            StringBuilder nickname = new StringBuilder("G");
+
+            for (int i = 0; i < 9; i++) {
+                nickname.append(NICKNAME_CHARACTERS.charAt(
+                        RANDOM.nextInt(NICKNAME_CHARACTERS.length())
+                ));
+            }
+
+            String candidate = nickname.toString();
+            if (!playerRepository.existsByNickname(candidate)) {
+                return candidate;
+            }
+        }
+
+        throw new BusinessException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "게스트 닉네임 생성에 실패했습니다. 다시 시도해 주세요."
+        );
     }
 
     @Transactional
@@ -124,5 +176,66 @@ public class UserService {
                 user.getId(),
                 user.getEmail()
         );
+    }
+
+    @Transactional
+    public IdentityLinkResponse linkSocialIdentity(
+            Long currentUserId,
+            LoginProvider provider,
+            String verifiedProviderUserId,
+            String verifiedEmail
+    ) {
+        if (provider != LoginProvider.GOOGLE
+                && provider != LoginProvider.KAKAO
+                && provider != LoginProvider.NAVER) {
+            throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "지원하지 않는 연결 방식입니다."
+            );
+        }
+
+        User user = userRepository.findByIdForUpdate(currentUserId)
+                .orElseThrow(() -> new BusinessException(
+                        HttpStatus.UNAUTHORIZED,
+                        "로그인한 사용자를 찾을 수 없습니다."
+                ));
+
+        UserIdentity currentIdentity = userIdentityRepository
+                .findByUser_IdAndProvider(currentUserId, provider)
+                .orElse(null);
+
+        if (currentIdentity != null) {
+            if (currentIdentity.getProviderUserId().equals(verifiedProviderUserId)) {
+                return new IdentityLinkResponse(provider, true);
+            }
+
+            throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "이미 다른 계정이 해당 로그인 방식으로 연결되어 있습니다."
+            );
+        }
+
+        boolean alreadyUsed = userIdentityRepository
+                .existsByProviderAndProviderUserId(provider, verifiedProviderUserId);
+
+        if (alreadyUsed) {
+            throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "이미 다른 게임 계정에 연결된 계정입니다."
+            );
+        }
+
+        UserIdentity socialIdentity = UserIdentity.createSocial(
+                user, provider, verifiedProviderUserId, verifiedEmail
+        );
+        userIdentityRepository.saveAndFlush(socialIdentity);
+
+        // 소셜 로그인 수단이 생겼으므로 GUEST 표시는 제거한다.
+        userIdentityRepository
+                .findByUser_IdAndProvider(currentUserId, LoginProvider.GUEST)
+                .ifPresent(userIdentityRepository::delete);
+        userIdentityRepository.flush();
+
+        return new IdentityLinkResponse(provider, true);
     }
 }
