@@ -5,7 +5,9 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.swordmaster.common.BusinessException;
+import com.swordmaster.common.enums.LoginProvider;
 import com.swordmaster.user.dto.GoogleLoginRequest;
+import com.swordmaster.user.dto.IdentityLinkResponse;
 import com.swordmaster.user.dto.LoginResponse;
 import com.swordmaster.user.service.UserService;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,6 +62,29 @@ public class ExternalAPIService {
 
         // 별도 Spring 서비스 호출부터 DB 트랜잭션이 시작된다.
         return userService.googleLogin(googleSub, email);
+    }
+
+    public IdentityLinkResponse linkGoogle(
+            Long currentUserId,
+            GoogleLoginRequest request
+    ) {
+        // Google 검증이 끝난 다음 DB 트랜잭션을 시작한다.
+        GoogleIdToken.Payload payload = verifyGoogle(request.idToken());
+
+        String email = Boolean.TRUE.equals(payload.getEmailVerified())
+                ? payload.getEmail()
+                : null;
+
+        if (email != null && (email.isBlank() || email.length() > 254)) {
+            email = null;
+        }
+
+        return userService.linkSocialIdentity(
+                currentUserId,
+                LoginProvider.GOOGLE,
+                payload.getSubject(),
+                email
+        );
     }
 
     private GoogleIdToken.Payload verifyGoogle(String idToken) {

@@ -37,8 +37,7 @@ public class UserController {
 
     @PostMapping("/api/auth/login/guest")
     public ResponseEntity<LoginResponse> guestLogin(){
-
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(userService.guestlogin());
     }
 
     @PostMapping("/api/auth/refresh") //자동로그인, access 토큰 만료 시 재발급
@@ -59,5 +58,13 @@ public class UserController {
             @AuthenticationPrincipal Long userId //jwt에 존재하는 userId값을 사용
     ){
         return ResponseEntity.ok(userService.getMe(userId));
+    }
+
+    @PostMapping("/api/user/identities/google")
+    public ResponseEntity<IdentityLinkResponse> linkGoogle(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody GoogleLoginRequest request
+    ) {
+        return ResponseEntity.ok(externalAPIService.linkGoogle(userId, request));
     }
 }
