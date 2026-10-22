@@ -40,6 +40,8 @@ https://github.com/upgrade-29/swordmaster-client
 
 ### 접속 주소
 
+현재 서버 중단 중 (dev 계정 이관 예정)
+
 | 용도 | 주소 |
 | --- | --- |
 | REST API | `https://api.upgrade-29.com` |
